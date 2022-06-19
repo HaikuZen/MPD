@@ -42,7 +42,10 @@ namespace Yajl {
  */
 class Handle {
 	yajl_handle handle = nullptr;
+
+#ifdef NDEBUG	
 	std::string json;
+#endif
 
 public:
 	Handle() = default;
@@ -64,11 +67,16 @@ public:
 		std::swap(handle, src.handle);
 		return *this;
 	}
-	
+#ifdef NDEBUG	
 	std::string getJson() {return json;}
+#endif
 
 	void Parse(const unsigned char *jsonText, size_t jsonTextLength) {
+
+#ifdef NDEBUG		
 		json=std::string(reinterpret_cast<const char*>(jsonText));
+#endif	
+
 		HandleStatus(yajl_parse(handle, jsonText, jsonTextLength));
 	}
 
