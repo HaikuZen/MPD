@@ -23,7 +23,6 @@
 #include "pcm/Export.hxx"
 #include "io/UniqueFileDescriptor.hxx"
 #include "system/Error.hxx"
-#include "util/ConstBuffer.hxx"
 #include "util/Domain.hxx"
 #include "util/ByteOrder.hxx"
 #include "util/Manual.hxx"
@@ -691,12 +690,12 @@ OssOutput::Play(const void *chunk, size_t size)
 	if (!fd.IsDefined())
 		Reopen();
 
-	const auto e = pcm_export->Export({chunk, size});
+	const auto e = pcm_export->Export({(const std::byte *)chunk, size});
 	if (e.empty())
 		return size;
 
-	chunk = e.data;
-	size = e.size;
+	chunk = e.data();
+	size = e.size();
 
 	while (true) {
 		ret = fd.Write(chunk, size);

@@ -27,7 +27,6 @@
 #include "util/OffsetPointer.hxx"
 #include "util/ScopeExit.hxx"
 #include "util/StringCompare.hxx"
-#include "util/StringView.hxx"
 #include "util/UriExtract.hxx"
 #include "tag/Handler.hxx"
 #include "tag/Generic.hxx"
@@ -106,7 +105,7 @@ handle_listfiles_local(Response &r, Path path_fs)
 
 gcc_pure
 static bool
-IsValidName(const StringView s) noexcept
+IsValidName(const std::string_view s) noexcept
 {
 	if (s.empty() || !IsAlphaASCII(s.front()))
 		return false;
@@ -118,7 +117,7 @@ IsValidName(const StringView s) noexcept
 
 gcc_pure
 static bool
-IsValidValue(const StringView s) noexcept
+IsValidValue(const std::string_view s) noexcept
 {
 	return std::none_of(s.begin(), s.end(), [](const auto &ch) { return (unsigned char)ch < 0x20; });
 }
@@ -130,7 +129,7 @@ public:
 	explicit PrintCommentHandler(Response &_response) noexcept
 		:NullTagHandler(WANT_PAIR), response(_response) {}
 
-	void OnPair(StringView key, StringView value) noexcept override {
+	void OnPair(std::string_view key, std::string_view value) noexcept override {
 		if (IsValidName(key) && IsValidValue(value))
 			response.Fmt(FMT_STRING("{}: {}\n"), key, value);
 	}
@@ -139,7 +138,7 @@ public:
 CommandResult
 handle_read_comments(Client &client, Request args, Response &r)
 {
-	assert(args.size == 1);
+	assert(args.size() == 1);
 
 	const char *const uri = args.front();
 
@@ -290,7 +289,7 @@ read_db_art(Client &client, Response &r, const char *uri, const uint64_t offset)
 CommandResult
 handle_album_art(Client &client, Request args, Response &r)
 {
-	assert(args.size == 2);
+	assert(args.size() == 2);
 
 	const char *uri = args.front();
 	size_t offset = args.ParseUnsigned(1);
@@ -370,7 +369,7 @@ public:
 CommandResult
 handle_read_picture(Client &client, Request args, Response &r)
 {
-	assert(args.size == 2);
+	assert(args.size() == 2);
 
 	const char *const uri = args.front();
 	const size_t offset = args.ParseUnsigned(1);

@@ -30,6 +30,7 @@
 #include "event/Call.hxx"
 #include "util/Domain.hxx"
 #include "util/DeleteDisposer.hxx"
+#include "util/SpanCast.hxx"
 #include "config/Net.hxx"
 
 #ifdef HAVE_ZEROCONF
@@ -214,9 +215,8 @@ SnapcastOutput::RemoveClient(SnapcastClient &client) noexcept
 std::chrono::steady_clock::duration
 SnapcastOutput::Delay() const noexcept
 {
-	if (!LockHasClients() && pause) {
-		/* if there's no client and this output is paused,
-		   then Pause() will not do anything, it will not fill
+	if (pause) {
+		/* Pause() will not do anything, it will not fill
 		   the buffer and it will not update the timer;
 		   therefore, we reset the timer here */
 		timer->Reset();
@@ -277,8 +277,7 @@ ToJson(const Tag &tag) noexcept
 
 	gen.CloseMap();
 
-	const auto result = gen.GetBuffer();
-	return {(const char *)result.data, result.size};
+	return std::string{ToStringView(gen.GetBuffer())};
 }
 
 #endif

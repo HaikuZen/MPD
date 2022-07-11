@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2021 CM4all GmbH
+ * Copyright 2007-2022 CM4all GmbH
  * All rights reserved.
  *
  * author: Max Kellermann <mk@cm4all.com>
@@ -32,30 +32,30 @@
 
 #pragma once
 
-#include <system_error>
-
-struct AvahiClient;
+#include <avahi-client/client.h>
 
 namespace Avahi {
 
-class ErrorCategory final : public std::error_category {
+class ConnectionListener {
 public:
-	const char *name() const noexcept override {
-		return "avahi-client";
-	}
+	/**
+	 * The connection to the Avahi daemon has been established.
+	 *
+	 * Note that this may be called again after a collision
+	 * (AVAHI_CLIENT_S_COLLISION) or a host name change
+	 * (AVAHI_CLIENT_S_REGISTERING).
+	 */
+	virtual void OnAvahiConnect(AvahiClient *client) noexcept = 0;
+	virtual void OnAvahiDisconnect() noexcept = 0;
 
-	std::string message(int condition) const override;
+	/**
+	 * Something about the Avahi connection has changed, e.g. a
+	 * collision (AVAHI_CLIENT_S_COLLISION) or a host name change
+	 * (AVAHI_CLIENT_S_REGISTERING).  Services shall be
+	 * unpublished now, and will be re-published in the following
+	 * OnAvahiConnect() call.
+	 */
+	virtual void OnAvahiChanged() noexcept {}
 };
-
-extern ErrorCategory error_category;
-
-inline std::system_error
-MakeError(int error, const char *msg) noexcept
-{
-	return std::system_error(error, error_category, msg);
-}
-
-std::system_error
-MakeError(AvahiClient &client, const char *msg) noexcept;
 
 } // namespace Avahi

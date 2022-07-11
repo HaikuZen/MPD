@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2021 CM4all GmbH
+ * Copyright 2007-2022 CM4all GmbH
  * All rights reserved.
  *
  * author: Max Kellermann <mk@cm4all.com>
@@ -32,18 +32,23 @@
 
 #pragma once
 
-#include <avahi-client/publish.h>
+#include <avahi-common/address.h>
 
-#include <memory>
+#include <cstdint>
+#include <string>
 
 namespace Avahi {
 
-struct EntryGroupDeleter {
-	void operator()(AvahiEntryGroup *g) noexcept {
-		avahi_entry_group_free(g);
-	}
-};
+struct Service {
+	AvahiIfIndex interface = AVAHI_IF_UNSPEC;
+	AvahiProtocol protocol = AVAHI_PROTO_UNSPEC;
+	std::string type;
+	uint16_t port;
 
-using EntryGroupPtr = std::unique_ptr<AvahiEntryGroup, EntryGroupDeleter>;
+	Service(AvahiIfIndex _interface, AvahiProtocol _protocol,
+		const char *_type, uint16_t _port) noexcept
+		:interface(_interface), protocol(_protocol),
+		 type(_type), port(_port) {}
+};
 
 } // namespace Avahi

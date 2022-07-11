@@ -29,13 +29,12 @@
 
 #pragma once
 
+#include "CopyConst.hxx"
+
 #include <cassert>
 #include <cstddef>
 #include <span>
 #include <string_view>
-
-template<typename From, typename To>
-using CopyConst = std::conditional_t<std::is_const_v<From>, const To, To>;
 
 /**
  * Cast a std::span<std::byte> to a std::span<T>, rounding down to the
@@ -43,12 +42,15 @@ using CopyConst = std::conditional_t<std::is_const_v<From>, const To, To>;
  */
 template<typename T>
 constexpr std::span<T>
-FromBytesFloor(std::span<CopyConst<T, std::byte>> other) noexcept
+FromBytesFloor(std::span<CopyConst<std::byte, T>> other) noexcept
 {
 	static_assert(sizeof(T) > 0, "Empty base type");
 
+	/* TODO: the "void *" cast suppresses alignment
+	   warnings, but should we really suppress them? */
+
 	return {
-		reinterpret_cast<T *>(other.data()),
+		reinterpret_cast<T *>(reinterpret_cast<CopyConst<void, T> *>(other.data())),
 		other.size() / sizeof(T),
 	};
 }
@@ -58,7 +60,7 @@ FromBytesFloor(std::span<CopyConst<T, std::byte>> other) noexcept
  */
 template<typename T>
 constexpr std::span<T>
-FromBytesStrict(std::span<CopyConst<T, std::byte>> other) noexcept
+FromBytesStrict(std::span<CopyConst<std::byte, T>> other) noexcept
 {
 	assert(other.size() % sizeof(T) == 0);
 
@@ -81,4 +83,16 @@ inline std::span<const std::byte>
 AsBytes(std::string_view sv) noexcept
 {
 	return std::as_bytes(ToSpan(sv));
+}
+
+constexpr std::string_view
+ToStringView(std::span<const char> s) noexcept
+{
+	return {s.data(), s.size()};
+}
+
+constexpr std::string_view
+ToStringView(std::span<const std::byte> s) noexcept
+{
+	return ToStringView(FromBytesStrict<const char>(s));
 }

@@ -1,5 +1,8 @@
 /*
- * Copyright 2013-2021 Max Kellermann <max.kellermann@gmail.com>
+ * Copyright 2022 CM4all GmbH
+ * All rights reserved.
+ *
+ * author: Max Kellermann <mk@cm4all.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,19 +30,45 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef WSTRING_VIEW_HXX
-#define WSTRING_VIEW_HXX
+#pragma once
 
-#include "StringView.hxx"
+#include <cassert>
+#include <cstddef>
 
-#include <wchar.h>
+template<bool enable> class OptionalCounter;
 
-struct WStringView : BasicStringView<wchar_t> {
-	using BasicStringView::BasicStringView;
-
-	WStringView() = default;
-	constexpr WStringView(BasicStringView<value_type> src) noexcept
-		:BasicStringView(src) {}
+template<>
+class OptionalCounter<false>
+{
+public:
+	constexpr void reset() noexcept {}
+	constexpr auto &operator++() noexcept { return *this; }
+	constexpr auto &operator--() noexcept { return *this; }
 };
 
-#endif
+template<>
+class OptionalCounter<true>
+{
+	std::size_t value = 0;
+
+public:
+	constexpr operator std::size_t() const noexcept {
+		return value;
+	}
+
+	constexpr void reset() noexcept {
+		value = 0;
+	}
+
+	constexpr auto &operator++() noexcept {
+		++value;
+		return *this;
+	}
+
+	constexpr auto &operator--() noexcept {
+		assert(value > 0);
+
+		--value;
+		return *this;
+	}
+};

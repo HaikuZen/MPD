@@ -1,5 +1,5 @@
 /*
- * Copyright 2007-2021 CM4all GmbH
+ * Copyright 2007-2022 CM4all GmbH
  * All rights reserved.
  *
  * author: Max Kellermann <mk@cm4all.com>
@@ -30,27 +30,20 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "Error.hxx"
+#pragma once
 
-#include <avahi-client/client.h>
-#include <avahi-common/error.h>
+#include <avahi-client/publish.h>
 
-#include <system_error>
+#include <memory>
 
 namespace Avahi {
 
-ErrorCategory error_category;
+struct EntryGroupDeleter {
+	void operator()(AvahiEntryGroup *g) noexcept {
+		avahi_entry_group_free(g);
+	}
+};
 
-std::string
-ErrorCategory::message(int condition) const
-{
-	return avahi_strerror(condition);
-}
-
-std::system_error
-MakeError(AvahiClient &client, const char *msg) noexcept
-{
-	return MakeError(avahi_client_errno(&client), msg);
-}
+using EntryGroupPtr = std::unique_ptr<AvahiEntryGroup, EntryGroupDeleter>;
 
 } // namespace Avahi

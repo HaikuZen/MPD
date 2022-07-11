@@ -1,8 +1,5 @@
 /*
- * Copyright 2007-2021 CM4all GmbH
- * All rights reserved.
- *
- * author: Max Kellermann <mk@cm4all.com>
+ * Copyright 2022 Max Kellermann <max.kellermann@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,62 +29,12 @@
 
 #pragma once
 
-#include "Poll.hxx"
-#include "event/CoarseTimerEvent.hxx"
+#include <type_traits>
 
-#include <avahi-client/client.h>
-
-#include <forward_list>
-
-class EventLoop;
-
-namespace Avahi {
-
-class ErrorHandler;
-class ConnectionListener;
-
-class Client final {
-	ErrorHandler &error_handler;
-
-	CoarseTimerEvent reconnect_timer;
-
-	Poll poll;
-
-	AvahiClient *client = nullptr;
-
-	std::forward_list<ConnectionListener *> listeners;
-
-public:
-	Client(EventLoop &event_loop, ErrorHandler &_error_handler) noexcept;
-	~Client() noexcept;
-
-	Client(const Client &) = delete;
-	Client &operator=(const Client &) = delete;
-
-	EventLoop &GetEventLoop() const noexcept {
-		return poll.GetEventLoop();
-	}
-
-	void Close() noexcept;
-
-	AvahiClient *GetClient() noexcept {
-		return client;
-	}
-
-	void AddListener(ConnectionListener &listener) noexcept {
-		listeners.push_front(&listener);
-	}
-
-	void RemoveListener(ConnectionListener &listener) noexcept {
-		listeners.remove(&listener);
-	}
-
-private:
-	void ClientCallback(AvahiClient *c, AvahiClientState state) noexcept;
-	static void ClientCallback(AvahiClient *c, AvahiClientState state,
-				   void *userdata) noexcept;
-
-	void OnReconnectTimer() noexcept;
-};
-
-} // namespace Avahi
+/**
+ * Generate a type based on #To with the same const-ness as #From.
+ */
+template<typename To, typename From>
+using CopyConst = std::conditional_t<std::is_const_v<From>,
+				     std::add_const_t<To>,
+				     std::remove_const_t<To>>;
