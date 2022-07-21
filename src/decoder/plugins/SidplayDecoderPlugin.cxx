@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2021 The Music Player Daemon Project
+ * Copyright 2003-2022 The Music Player Daemon Project
  * http://www.musicpd.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -419,15 +419,16 @@ sidplay_file_decode(DecoderClient &client, Path path_fs)
 
 #ifdef HAVE_SIDPLAYFP
 		/* libsidplayfp returns the number of samples */
-		const size_t nbytes = result * sizeof(buffer[0]);
+		const size_t n_samples = result;
 #else
 		/* libsidplay2 returns the number of bytes */
-		const size_t nbytes = result;
+		const size_t n_samples = result / sizeof(buffer[0]);
 #endif
 
 		client.SubmitTimestamp(FloatDuration(player.time()) / timebase);
 
-		cmd = client.SubmitData(nullptr, buffer, nbytes, 0);
+		cmd = client.SubmitAudio(nullptr, std::span{buffer, n_samples},
+					 0);
 
 		if (cmd == DecoderCommand::SEEK) {
 			unsigned data_time = player.time();

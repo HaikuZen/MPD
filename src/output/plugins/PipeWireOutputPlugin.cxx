@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2021 The Music Player Daemon Project
+ * Copyright 2003-2022 The Music Player Daemon Project
  * http://www.musicpd.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -290,7 +290,7 @@ private:
 	}
 
 	[[nodiscard]] std::chrono::steady_clock::duration Delay() const noexcept override;
-	size_t Play(const void *chunk, size_t size) override;
+	std::size_t Play(std::span<const std::byte> src) override;
 
 	void Drain() override;
 	void Cancel() noexcept override;
@@ -513,6 +513,7 @@ PipeWireOutput::Open(AudioFormat &audio_format)
 				       PW_KEY_MEDIA_CATEGORY, "Playback",
 				       PW_KEY_MEDIA_ROLE, "Music",
 				       PW_KEY_APP_NAME, "Music Player Daemon",
+				       PW_KEY_APP_ICON_NAME, "mpd",
 				       nullptr);
 
 	pw_properties_setf(props, PW_KEY_NODE_NAME, "mpd.%s", name);
@@ -828,8 +829,8 @@ PipeWireOutput::Delay() const noexcept
 	return result;
 }
 
-size_t
-PipeWireOutput::Play(const void *chunk, size_t size)
+std::size_t
+PipeWireOutput::Play(std::span<const std::byte> src)
 {
 	const PipeWire::ThreadLoopLock lock(thread_loop);
 
@@ -839,7 +840,7 @@ PipeWireOutput::Play(const void *chunk, size_t size)
 		CheckThrowError();
 
 		std::size_t bytes_written =
-			ring_buffer->push((const std::byte *)chunk, size);
+			ring_buffer->push(src.data(), src.size());
 		if (bytes_written > 0) {
 			drained = false;
 			return bytes_written;

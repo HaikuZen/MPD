@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2021 The Music Player Daemon Project
+ * Copyright 2003-2022 The Music Player Daemon Project
  * http://www.musicpd.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -93,9 +93,9 @@ public:
 		    void *buffer, size_t length) noexcept override;
 
 	void SubmitTimestamp(FloatDuration) noexcept override {}
-	DecoderCommand SubmitData(InputStream *is,
-				  const void *data, size_t length,
-				  uint16_t kbit_rate) noexcept override;
+	DecoderCommand SubmitAudio(InputStream *is,
+				   std::span<const std::byte> audio,
+				   uint16_t kbit_rate) noexcept override;
 
 	DecoderCommand SubmitTag(InputStream *, Tag &&) noexcept override {
 		return GetCommand();

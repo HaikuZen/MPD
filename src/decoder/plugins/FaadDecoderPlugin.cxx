@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2021 The Music Player Daemon Project
+ * Copyright 2003-2022 The Music Player Daemon Project
  * http://www.musicpd.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -354,7 +354,7 @@ faad_stream_decode(DecoderClient &client, InputStream &is,
 		/* decode it */
 
 		NeAACDecFrameInfo frame_info;
-		const void *const decoded =
+		const auto decoded = (const int16_t *)
 			faad_decoder_decode(decoder, buffer, &frame_info);
 
 		if (frame_info.error > 0) {
@@ -391,9 +391,9 @@ faad_stream_decode(DecoderClient &client, InputStream &is,
 
 		/* send PCM samples to MPD */
 
-		cmd = client.SubmitData(is, decoded,
-					(size_t)frame_info.samples * 2,
-					bit_rate);
+		const std::span audio{decoded, (size_t)frame_info.samples};
+
+		cmd = client.SubmitAudio(is, audio, bit_rate);
 	} while (cmd != DecoderCommand::STOP);
 }
 

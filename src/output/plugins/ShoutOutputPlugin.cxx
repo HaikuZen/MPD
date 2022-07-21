@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2021 The Music Player Daemon Project
+ * Copyright 2003-2022 The Music Player Daemon Project
  * http://www.musicpd.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -71,8 +71,6 @@ struct ShoutOutput final : AudioOutput {
 
 	Encoder *encoder;
 
-	uint8_t buffer[32768];
-
 	explicit ShoutOutput(const ConfigBlock &block);
 	~ShoutOutput() override;
 
@@ -90,7 +88,7 @@ struct ShoutOutput final : AudioOutput {
 
 	[[nodiscard]] std::chrono::steady_clock::duration Delay() const noexcept override;
 	void SendTag(const Tag &tag) override;
-	size_t Play(const void *chunk, size_t size) override;
+	std::size_t Play(std::span<const std::byte> src) override;
 	void Cancel() noexcept override;
 	bool Pause() override;
 
@@ -325,15 +323,17 @@ HandleShoutError(shout_t *shout_conn, int err)
 }
 
 static void
-EncoderToShout(shout_t *shout_conn, Encoder &encoder,
-	       unsigned char *buffer, size_t buffer_size)
+EncoderToShout(shout_t *shout_conn, Encoder &encoder)
 {
 	while (true) {
-		size_t nbytes = encoder.Read(buffer, buffer_size);
-		if (nbytes == 0)
+		std::byte buffer[32768];
+		const auto e = encoder.Read(std::span{buffer});
+		if (e.empty() == 0)
 			return;
 
-		int err = shout_send(shout_conn, buffer, nbytes);
+		int err = shout_send(shout_conn,
+				     (const unsigned char *)e.data(),
+				     e.size());
 		HandleShoutError(shout_conn, err);
 	}
 }
@@ -343,7 +343,7 @@ ShoutOutput::WritePage()
 {
 	assert(encoder != nullptr);
 
-	EncoderToShout(shout_conn, *encoder, buffer, sizeof(buffer));
+	EncoderToShout(shout_conn, *encoder);
 }
 
 void
@@ -413,20 +413,20 @@ ShoutOutput::Delay() const noexcept
 	return std::chrono::milliseconds(delay);
 }
 
-size_t
-ShoutOutput::Play(const void *chunk, size_t size)
+std::size_t
+ShoutOutput::Play(std::span<const std::byte> src)
 {
-	encoder->Write(chunk, size);
+	encoder->Write(src);
 	WritePage();
-	return size;
+	return src.size();
 }
 
 bool
 ShoutOutput::Pause()
 {
-	static char silence[1020];
+	static std::byte silence[1020];
 
-	encoder->Write(silence, sizeof(silence));
+	encoder->Write(std::span{silence});
 	WritePage();
 
 	return true;

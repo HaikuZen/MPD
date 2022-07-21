@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2021 The Music Player Daemon Project
+ * Copyright 2003-2022 The Music Player Daemon Project
  * http://www.musicpd.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -94,7 +94,9 @@ wildmidi_output(DecoderClient &client, midi *wm)
 	if (length <= 0)
 		return DecoderCommand::STOP;
 
-	return client.SubmitData(nullptr, buffer, length, 0);
+	return client.SubmitAudio(nullptr,
+				  std::span{buffer, std::size_t(length)},
+				  0);
 }
 
 static void

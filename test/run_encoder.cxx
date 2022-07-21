@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2021 The Music Player Daemon Project
+ * Copyright 2003-2022 The Music Player Daemon Project
  * http://www.musicpd.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -37,7 +37,6 @@
 int main(int argc, char **argv)
 try {
 	const char *encoder_name;
-	static char buffer[32768];
 
 	/* parse command line */
 
@@ -79,9 +78,10 @@ try {
 
 	/* do it */
 
+	static std::byte buffer[32768];
 	ssize_t nbytes;
 	while ((nbytes = read(0, buffer, sizeof(buffer))) > 0) {
-		encoder->Write(buffer, nbytes);
+		encoder->Write(std::span{buffer}.first(nbytes));
 		EncoderToOutputStream(os, *encoder);
 	}
 

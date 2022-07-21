@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2021 The Music Player Daemon Project
+ * Copyright 2003-2022 The Music Player Daemon Project
  * http://www.musicpd.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -112,7 +112,7 @@ private:
 	void Close() noexcept override;
 
 	std::chrono::steady_clock::duration Delay() const noexcept override;
-	size_t Play(const void *chunk, size_t size) override;
+	std::size_t Play(std::span<const std::byte> src) override;
 	bool Pause() override;
 	void Cancel() noexcept override;
 };
@@ -770,20 +770,18 @@ OSXOutput::Open(AudioFormat &audio_format)
 	started = false;
 }
 
-size_t
-OSXOutput::Play(const void *chunk, size_t size)
+std::size_t
+OSXOutput::Play(std::span<const std::byte> input)
 {
-	assert(size > 0);
+	assert(!input.empty());
 
 	pause = false;
-
-	std::span<const std::byte> input((const std::byte *)chunk, size);
 
 #ifdef ENABLE_DSD
 	if (dop_enabled) {
 		input = pcm_export->Export(input);
 		if (input.empty())
-			return size;
+			return input.size();
 	}
 #endif
 

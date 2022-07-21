@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2021 The Music Player Daemon Project
+ * Copyright 2003-2022 The Music Player Daemon Project
  * http://www.musicpd.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -71,9 +71,9 @@ adplug_file_decode(DecoderClient &client, Path path_fs)
 		int16_t buffer[2048];
 		constexpr unsigned frames_per_buffer = std::size(buffer) / 2;
 		opl.update(buffer, frames_per_buffer);
-		cmd = client.SubmitData(nullptr,
-					buffer, sizeof(buffer),
-					0);
+		cmd = client.SubmitAudio(nullptr,
+					 std::span{buffer},
+					 0);
 	} while (cmd == DecoderCommand::NONE);
 
 	delete player;

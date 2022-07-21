@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2021 The Music Player Daemon Project
+ * Copyright 2003-2022 The Music Player Daemon Project
  * http://www.musicpd.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -171,7 +171,9 @@ mikmod_decoder_file_decode(DecoderClient &client, Path path_fs)
 	DecoderCommand cmd = DecoderCommand::NONE;
 	while (cmd == DecoderCommand::NONE && Player_Active()) {
 		ret = VC_WriteBytes(buffer, sizeof(buffer));
-		cmd = client.SubmitData(nullptr, buffer, ret, 0);
+		cmd = client.SubmitAudio(nullptr,
+					 std::span{buffer, std::size_t(ret)},
+					 0);
 	}
 
 	Player_Stop();

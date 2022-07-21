@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2021 The Music Player Daemon Project
+ * Copyright 2003-2022 The Music Player Daemon Project
  * http://www.musicpd.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -187,7 +187,7 @@ pcm_stream_decode(DecoderClient &client, InputStream &is)
 		auto r = buffer.Read();
 		/* round down to the nearest frame size, because we
 		   must not pass partial frames to
-		   DecoderClient::SubmitData() */
+		   DecoderClient::SubmitAudio() */
 		r = r.first(r.size() - r.size() % in_frame_size);
 		buffer.Consume(r.size());
 
@@ -209,7 +209,7 @@ pcm_stream_decode(DecoderClient &client, InputStream &is)
 		}
 
 		cmd = !r.empty()
-			? client.SubmitData(is, r.data(), r.size(), 0)
+			? client.SubmitAudio(is, r, 0)
 			: client.GetCommand();
 		if (cmd == DecoderCommand::SEEK) {
 			uint64_t frame = client.GetSeekFrame();

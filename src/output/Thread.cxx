@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2021 The Music Player Daemon Project
+ * Copyright 2003-2022 The Music Player Daemon Project
  * http://www.musicpd.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -265,7 +265,7 @@ AudioOutputControl::PlayChunk(std::unique_lock<Mutex> &lock) noexcept
 
 		try {
 			const ScopeUnlock unlock(mutex);
-			nbytes = output->Play(data.data(), data.size());
+			nbytes = output->Play(data);
 			assert(nbytes > 0);
 			assert(nbytes <= data.size());
 		} catch (AudioOutputInterrupted) {
@@ -380,7 +380,7 @@ static void
 PlayFull(FilteredAudioOutput &output, std::span<const std::byte> buffer)
 {
 	while (!buffer.empty()) {
-		size_t nbytes = output.Play(buffer.data(), buffer.size());
+		size_t nbytes = output.Play(buffer);
 		assert(nbytes > 0);
 
 		buffer = buffer.subspan(nbytes);
@@ -421,7 +421,7 @@ AudioOutputControl::InternalDrain() noexcept
 void
 AudioOutputControl::Task() noexcept
 {
-	FormatThreadName("output:%s", GetName());
+	FormatThreadName("output:%s", GetName().c_str());
 
 	try {
 		SetThreadRealtime();

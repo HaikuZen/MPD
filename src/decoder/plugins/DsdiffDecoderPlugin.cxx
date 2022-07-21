@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2021 The Music Player Daemon Project
+ * Copyright 2003-2022 The Music Player Daemon Project
  * http://www.musicpd.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -417,8 +417,8 @@ dsdiff_decode_chunk(DecoderClient &client, InputStream &is,
 		if (lsbitfirst)
 			bit_reverse_buffer(buffer, buffer + nbytes);
 
-		cmd = client.SubmitData(is, buffer, nbytes,
-					kbit_rate);
+		cmd = client.SubmitAudio(is, std::span{buffer, nbytes},
+					 kbit_rate);
 	}
 
 	return true;

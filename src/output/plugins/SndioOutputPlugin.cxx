@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2021 The Music Player Daemon Project
+ * Copyright 2003-2022 The Music Player Daemon Project
  * http://www.musicpd.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -144,11 +144,9 @@ SndioOutput::Close()  noexcept
 }
 
 size_t
-SndioOutput::Play(const void *chunk, size_t size)
+SndioOutput::Play(std::span<const std::byte> src)
 {
-	size_t n;
-
-	n = sio_write(hdl, chunk, size);
+	const std::size_t n = sio_write(hdl, src.data(), src.size());
 	if (n == 0 && sio_eof(hdl) != 0)
 		throw std::runtime_error("sndio write failed");
 	return n;

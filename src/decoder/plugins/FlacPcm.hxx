@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2021 The Music Player Daemon Project
+ * Copyright 2003-2022 The Music Player Daemon Project
  * http://www.musicpd.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -44,12 +44,12 @@ public:
 	void Open(unsigned sample_rate, unsigned bits_per_sample,
 		  unsigned channels);
 
-	const AudioFormat &GetAudioFormat() const {
+	const AudioFormat &GetAudioFormat() const noexcept {
 		return audio_format;
 	}
 
 	std::span<const std::byte> Import(const FLAC__int32 *const src[],
-					  size_t n_frames);
+					  size_t n_frames) noexcept;
 };
 
 #endif

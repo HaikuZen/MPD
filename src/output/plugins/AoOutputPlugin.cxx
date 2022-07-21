@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2021 The Music Player Daemon Project
+ * Copyright 2003-2022 The Music Player Daemon Project
  * http://www.musicpd.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -58,6 +58,8 @@ class AoOutput final : AudioOutput, SafeSingleton<AoInit> {
 
 	size_t frame_size;
 
+	std::size_t max_size;
+
 	explicit AoOutput(const ConfigBlock &block);
 	~AoOutput() override;
 
@@ -72,7 +74,7 @@ public:
 	void Open(AudioFormat &audio_format) override;
 	void Close() noexcept override;
 
-	size_t Play(const void *chunk, size_t size) override;
+	std::size_t Play(std::span<const std::byte> src) override;
 };
 
 static constexpr Domain ao_output_domain("ao_output");
@@ -173,6 +175,11 @@ AoOutput::Open(AudioFormat &audio_format)
 
 	frame_size = audio_format.GetFrameSize();
 
+	/* round down to a multiple of the frame size */
+	/* no matter how small "write_size" was configured, we must
+	   pass at least one frame to libao */
+	max_size = std::max(write_size / frame_size, std::size_t{1}) * frame_size;
+
 	format.rate = audio_format.sample_rate;
 	format.byte_format = AO_FMT_NATIVE;
 	format.channels = audio_format.channels;
@@ -188,31 +195,24 @@ AoOutput::Close() noexcept
 	ao_close(device);
 }
 
-size_t
-AoOutput::Play(const void *chunk, size_t size)
+std::size_t
+AoOutput::Play(std::span<const std::byte> src)
 {
-	assert(size % frame_size == 0);
+	assert(src.size() % frame_size == 0);
 
-	if (size > write_size) {
+	if (src.size() > max_size)
 		/* round down to a multiple of the frame size */
-		size = (write_size / frame_size) * frame_size;
-
-		if (size < frame_size)
-			/* no matter how small "write_size" was
-			   configured, we must pass at least one frame
-			   to libao */
-			size = frame_size;
-	}
+		src = src.first(max_size);
 
 	/* For whatever reason, libao wants a non-const pointer.
 	   Let's hope it does not write to the buffer, and use the
 	   union deconst hack to * work around this API misdesign. */
-	char *data = const_cast<char *>((const char *)chunk);
+	char *data = const_cast<char *>((const char *)src.data());
 
-	if (ao_play(device, data, size) == 0)
+	if (ao_play(device, data, src.size()) == 0)
 		throw MakeAoError();
 
-	return size;
+	return src.size();
 }
 
 const struct AudioOutputPlugin ao_output_plugin = {

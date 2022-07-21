@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2021 The Music Player Daemon Project
+ * Copyright 2003-2022 The Music Player Daemon Project
  * http://www.musicpd.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -45,7 +45,7 @@ private:
 		pclose(fh);
 	}
 
-	size_t Play(const void *chunk, size_t size) override;
+	std::size_t Play(std::span<const std::byte> src) override;
 };
 
 PipeOutput::PipeOutput(const ConfigBlock &block)
@@ -64,10 +64,10 @@ PipeOutput::Open([[maybe_unused]] AudioFormat &audio_format)
 		throw FormatErrno("Error opening pipe \"%s\"", cmd.c_str());
 }
 
-inline size_t
-PipeOutput::Play(const void *chunk, size_t size)
+std::size_t
+PipeOutput::Play(std::span<const std::byte> src)
 {
-	size_t nbytes = fwrite(chunk, 1, size, fh);
+	size_t nbytes = fwrite(src.data(), 1, src.size(), fh);
 	if (nbytes == 0)
 		throw MakeErrno("Write error on pipe");
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2021 The Music Player Daemon Project
+ * Copyright 2003-2022 The Music Player Daemon Project
  * http://www.musicpd.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -33,8 +33,6 @@
 
 #include <stddef.h>
 
-static uint8_t zero[256];
-
 int
 main([[maybe_unused]] int argc, [[maybe_unused]] char **argv)
 try {
@@ -61,7 +59,8 @@ try {
 
 	/* write a block of data */
 
-	encoder->Write(zero, sizeof(zero));
+	static constexpr std::byte zero[256]{};
+	encoder->Write(std::span{zero});
 
 	EncoderToOutputStream(os, *encoder);
 
@@ -86,7 +85,7 @@ try {
 
 	/* write another block of data */
 
-	encoder->Write(zero, sizeof(zero));
+	encoder->Write(std::span{zero});
 
 	/* finish */
 

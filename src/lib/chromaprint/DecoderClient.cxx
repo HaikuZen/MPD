@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2021 The Music Player Daemon Project
+ * Copyright 2003-2022 The Music Player Daemon Project
  * http://www.musicpd.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -63,23 +63,21 @@ ChromaprintDecoderClient::Ready(AudioFormat audio_format, bool,
 }
 
 DecoderCommand
-ChromaprintDecoderClient::SubmitData(InputStream *,
-				     const void *_data, size_t length,
-				     uint16_t) noexcept
+ChromaprintDecoderClient::SubmitAudio(InputStream *,
+				      std::span<const std::byte> audio,
+				      uint16_t) noexcept
 {
 	assert(ready);
 
-	if (length > remaining_bytes)
+	if (audio.size() > remaining_bytes)
 		remaining_bytes = 0;
 	else
-		remaining_bytes -= length;
-
-	std::span<const std::byte> src{(const std::byte *)_data, length};
+		remaining_bytes -= audio.size();
 
 	if (convert)
-		src = convert->Convert(src);
+		audio = convert->Convert(audio);
 
-	chromaprint.Feed(FromBytesStrict<const int16_t>(src));
+	chromaprint.Feed(FromBytesStrict<const int16_t>(audio));
 
 	return GetCommand();
 }

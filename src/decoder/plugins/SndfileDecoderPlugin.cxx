@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2021 The Music Player Daemon Project
+ * Copyright 2003-2022 The Music Player Daemon Project
  * http://www.musicpd.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -227,9 +227,9 @@ sndfile_stream_decode(DecoderClient &client, InputStream &is)
 		if (num_frames <= 0)
 			break;
 
-		cmd = client.SubmitData(is,
-					buffer, num_frames * frame_size,
-					0);
+		cmd = client.SubmitAudio(is,
+					 std::span{buffer, num_frames * frame_size},
+					 0);
 		if (cmd == DecoderCommand::SEEK) {
 			sf_count_t c = client.GetSeekFrame();
 			c = sf_seek(sf, c, SEEK_SET);

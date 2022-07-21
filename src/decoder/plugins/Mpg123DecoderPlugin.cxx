@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2021 The Music Player Daemon Project
+ * Copyright 2003-2022 The Music Player Daemon Project
  * http://www.musicpd.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -253,7 +253,8 @@ mpd_mpg123_file_decode(DecoderClient &client, Path path_fs)
 
 		/* send to MPD */
 
-		cmd = client.SubmitData(nullptr, buffer, nbytes, info.bitrate);
+		cmd = client.SubmitAudio(nullptr, std::span{buffer, nbytes},
+					 info.bitrate);
 
 		if (cmd == DecoderCommand::SEEK) {
 			off_t c = client.GetSeekFrame();

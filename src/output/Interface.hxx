@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2021 The Music Player Daemon Project
+ * Copyright 2003-2022 The Music Player Daemon Project
  * http://www.musicpd.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -21,8 +21,9 @@
 #define MPD_AUDIO_OUTPUT_INTERFACE_HXX
 
 #include <map>
-#include <string>
 #include <chrono>
+#include <span>
+#include <string>
 
 struct AudioFormat;
 struct Tag;
@@ -180,7 +181,7 @@ public:
 	 * @return the number of bytes played (must be a multiple of
 	 * the frame size)
 	 */
-	virtual size_t Play(const void *chunk, size_t size) = 0;
+	virtual std::size_t Play(std::span<const std::byte> src) = 0;
 
 	/**
 	 * Wait until the device has finished playing.

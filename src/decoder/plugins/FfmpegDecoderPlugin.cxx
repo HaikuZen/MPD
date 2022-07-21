@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2021 The Music Player Daemon Project
+ * Copyright 2003-2022 The Music Player Daemon Project
  * http://www.musicpd.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -205,7 +205,7 @@ PtsToPcmFrame(uint64_t pts, const AVStream &stream,
 }
 
 /**
- * Invoke DecoderClient::SubmitData() with the contents of an
+ * Invoke DecoderClient::SubmitAudio() with the contents of an
  * #AVFrame.
  */
 static DecoderCommand
@@ -227,9 +227,8 @@ FfmpegSendFrame(DecoderClient &client, InputStream *is,
 		skip_bytes = 0;
 	}
 
-	return client.SubmitData(is,
-				 output_buffer.data(), output_buffer.size(),
-				 codec_context.bit_rate / 1000);
+	return client.SubmitAudio(is, output_buffer,
+				  codec_context.bit_rate / 1000);
 }
 
 static DecoderCommand

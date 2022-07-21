@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2021 The Music Player Daemon Project
+ * Copyright 2003-2022 The Music Player Daemon Project
  * http://www.musicpd.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -173,10 +173,10 @@ FilteredAudioOutput::SendTag(const Tag &tag)
 	output->SendTag(tag);
 }
 
-size_t
-FilteredAudioOutput::Play(const void *data, size_t size)
+std::size_t
+FilteredAudioOutput::Play(std::span<const std::byte> src)
 {
-	return output->Play(data, size);
+	return output->Play(src);
 }
 
 void

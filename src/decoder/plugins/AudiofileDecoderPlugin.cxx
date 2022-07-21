@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2021 The Music Player Daemon Project
+ * Copyright 2003-2022 The Music Player Daemon Project
  * http://www.musicpd.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -212,7 +212,7 @@ audiofile_stream_decode(DecoderClient &client, InputStream &is)
 	const auto kbit_rate = (uint16_t)
 		(is.GetSize() * uint64_t(8) / total_time.ToMS());
 
-	const auto frame_size = (unsigned)
+	const auto frame_size = (std::size_t)
 		afGetVirtualFrameSize(fh, AF_DEFAULT_TRACK, true);
 
 	client.Ready(audio_format, true, total_time);
@@ -226,9 +226,9 @@ audiofile_stream_decode(DecoderClient &client, InputStream &is)
 		if (nframes <= 0)
 			break;
 
-		cmd = client.SubmitData(nullptr,
-					chunk, nframes * frame_size,
-					kbit_rate);
+		cmd = client.SubmitAudio(nullptr,
+					 std::span{chunk, std::size_t(nframes) * frame_size},
+					 kbit_rate);
 
 		if (cmd == DecoderCommand::SEEK) {
 			AFframecount frame = client.GetSeekFrame();

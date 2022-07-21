@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2021 The Music Player Daemon Project
+ * Copyright 2003-2022 The Music Player Daemon Project
  * http://www.musicpd.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -49,7 +49,7 @@ public:
 private:
 	void Open(AudioFormat &audio_format) override;
 	void Close() noexcept override;
-	size_t Play(const void *chunk, size_t size) override;
+	size_t Play(std::span<const std::byte> src) override;
 };
 
 #endif

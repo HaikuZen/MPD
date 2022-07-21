@@ -1,5 +1,5 @@
 /*
- * Copyright 2003-2021 The Music Player Daemon Project
+ * Copyright 2003-2022 The Music Player Daemon Project
  * http://www.musicpd.org
  *
  * This program is free software; you can redistribute it and/or modify
@@ -155,7 +155,7 @@ RunOutput(AudioOutput &ao, AudioFormat audio_format,
 		if (src.empty())
 			continue;
 
-		size_t consumed = ao.Play(src.data(), src.size());
+		size_t consumed = ao.Play(src);
 
 		assert(consumed <= src.size());
 		assert(consumed % in_frame_size == 0);
