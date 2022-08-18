@@ -42,6 +42,7 @@
 #include "client/Client.hxx"
 #include "client/Response.hxx"
 #include "util/Tokenizer.hxx"
+#include "util/StaticVector.hxx"
 #include "util/StringAPI.hxx"
 
 #ifdef ENABLE_SQLITE
@@ -60,7 +61,7 @@
  * number of tags we can have.  Add one for the command, and one extra
  * to catch errors clients may send us
  */
-#define COMMAND_ARGV_MAX	(2+(TAG_NUM_OF_ITEM_TYPES*2))
+static constexpr std::size_t COMMAND_ARGV_MAX = 2 + TAG_NUM_OF_ITEM_TYPES * 2;
 
 /* if min: -1 don't check args *
  * if max: -1 no max args      */
@@ -402,26 +403,25 @@ command_process(Client &client, unsigned num, char *line) noexcept
 		return CommandResult::FINISH;
 	}
 
-	char *argv[COMMAND_ARGV_MAX];
-
 	try {
 		/* now parse the arguments (quoted or unquoted) */
 
-		std::size_t n_args = 0;
-		while (true) {
-			if (n_args == COMMAND_ARGV_MAX) {
-				r.Error(ACK_ERROR_ARG, "Too many arguments");
-				return CommandResult::ERROR;
-			}
+		StaticVector<const char *, COMMAND_ARGV_MAX> argv;
 
+		while (true) {
 			char *a = tokenizer.NextParam();
 			if (a == nullptr)
 				break;
 
-			argv[n_args++] = a;
+			if (argv.full()) {
+				r.Error(ACK_ERROR_ARG, "Too many arguments");
+				return CommandResult::ERROR;
+			}
+
+			argv.push_back(a);
 		}
 
-		Request args{argv, n_args};
+		const Request args{argv};
 
 		/* look up and invoke the command handler */
 

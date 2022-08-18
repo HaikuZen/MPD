@@ -161,11 +161,29 @@ HttpdOutput::ReadPage() noexcept
 
 	size_t size = 0;
 	do {
-		const auto r = encoder->Read(std::span{buffer}.subspan(size));
+		const auto b = std::span{buffer}.subspan(size);
+		const auto r = encoder->Read(b);
 		if (r.empty())
 			break;
 
 		unflushed_input = 0;
+
+		if (r.data() != b.data()) {
+			if (size == 0 && r.size() >= sizeof(buffer) / 2)
+				/* if the returned memory area is
+				   large (and nothing has been written
+				   to the stack buffer yet), copy
+				   right from the returned memory
+				   area, avoiding the copy into the
+				   buffer*/
+				return std::make_shared<Page>(r);
+
+			/* if the encoder did not write to the given
+			   buffer but instead returned its own buffer,
+			   we need to copy it so we have a contiguous
+			   buffer */
+			std::copy(r.begin(), r.end(), b.begin());
+		}
 
 		size += r.size();
 	} while (size < sizeof(buffer));
