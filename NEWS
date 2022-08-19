@@ -18,16 +18,20 @@ ver 0.24 (not yet released)
 * static partition configuration
 * remove Haiku support
 
-ver 0.23.9 (not yet released)
+ver 0.23.9 (2022/08/18)
 * input
   - cdio_paranoia: add options "mode" and "skip"
 * decoder
   - ffmpeg: support FFmpeg 5.1
+* filter
+  - replay gain: fix delayed volume display with handler=mixer
 * output
   - pipewire: set app icon
 * fix bogus volume levels with multiple partitions
 * improve iconv detection
 * macOS: fix macOS 10 build problem (0.23.8 regression)
+* Android
+  - load mpd.conf from app data directory
 
 ver 0.23.8 (2022/07/09)
 * storage

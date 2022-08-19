@@ -17,7 +17,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "mixer/MixerInternal.hxx"
+#include "WinmmMixerPlugin.hxx"
+#include "mixer/Mixer.hxx"
 #include "output/Features.h"
 #include "output/OutputAPI.hxx"
 #include "output/plugins/WinmmOutputPlugin.hxx"

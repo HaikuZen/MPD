@@ -17,9 +17,10 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include "AlsaMixerPlugin.hxx"
 #include "lib/alsa/NonBlock.hxx"
 #include "lib/alsa/Error.hxx"
-#include "mixer/MixerInternal.hxx"
+#include "mixer/Mixer.hxx"
 #include "mixer/Listener.hxx"
 #include "output/OutputAPI.hxx"
 #include "event/MultiSocketMonitor.hxx"

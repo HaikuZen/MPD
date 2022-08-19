@@ -17,13 +17,32 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "Filtered.hxx"
-#include "Interface.hxx"
-#include "mixer/Control.hxx"
-#include "filter/Prepared.hxx"
+#include "Control.hxx"
+#include "Mixer.hxx"
 
-FilteredAudioOutput::~FilteredAudioOutput()
+#include <cassert>
+
+Mixer *
+mixer_new(EventLoop &event_loop,
+	  const MixerPlugin &plugin, AudioOutput &ao,
+	  MixerListener &listener,
+	  const ConfigBlock &block)
 {
-	if (mixer != nullptr)
-		mixer_free(mixer);
+	Mixer *mixer = plugin.init(event_loop, ao, listener, block);
+
+	assert(mixer == nullptr || mixer->IsPlugin(plugin));
+
+	return mixer;
+}
+
+void
+mixer_free(Mixer *mixer) noexcept
+{
+	assert(mixer != nullptr);
+
+	/* mixers with the "global" flag set might still be open at
+	   this point (see Mixer::LockAutoClose()) */
+	mixer->LockClose();
+
+	delete mixer;
 }

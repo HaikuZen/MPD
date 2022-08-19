@@ -17,13 +17,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "Filtered.hxx"
-#include "Interface.hxx"
-#include "mixer/Control.hxx"
-#include "filter/Prepared.hxx"
+#pragma once
 
-FilteredAudioOutput::~FilteredAudioOutput()
-{
-	if (mixer != nullptr)
-		mixer_free(mixer);
-}
+struct MixerPlugin;
+
+extern const MixerPlugin winmm_mixer_plugin;

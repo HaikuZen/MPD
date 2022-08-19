@@ -17,24 +17,24 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef MPD_MIXER_INTERNAL_HXX
-#define MPD_MIXER_INTERNAL_HXX
+#pragma once
 
 #include "MixerPlugin.hxx"
-#include "MixerList.hxx"
 #include "thread/Mutex.hxx"
-#include "util/Compiler.h"
 
 #include <exception>
 
 class MixerListener;
 
 class Mixer {
-public:
 	const MixerPlugin &plugin;
 
+public:
+	/* this field needs to be public for the workaround in
+	   ReplayGainFilter::Update() - TODO eliminate this kludge */
 	MixerListener &listener;
 
+private:
 	/**
 	 * This mutex protects all of the mixer struct, including its
 	 * implementation, so plugins don't have to deal with that.
@@ -70,7 +70,40 @@ public:
 	}
 
 	/**
+	 * Throws on error.
+	 */
+	void LockOpen();
+
+	void LockClose() noexcept;
+
+	/**
+	 * Close the mixer unless the plugin's "global" flag is set.
+	 * This is called when the #AudioOutput is closed.
+	 */
+	void LockAutoClose() noexcept {
+		if (!IsGlobal())
+			LockClose();
+	}
+
+	/**
+	 * Throws on error.
+	 */
+	int LockGetVolume();
+
+	/**
+	 * Throws on error.
+	 */
+	void LockSetVolume(unsigned volume);
+
+private:
+	void _Open();
+	void _Close() noexcept;
+
+protected:
+	/**
 	 * Open mixer device
+	 *
+	 * Caller must lock the mutex.
 	 *
 	 * Throws std::runtime_error on error.
 	 */
@@ -78,11 +111,15 @@ public:
 
 	/**
 	 * Close mixer device
+	 *
+	 * Caller must lock the mutex.
 	 */
 	virtual void Close() noexcept = 0;
 
 	/**
 	 * Reads the current volume.
+	 *
+	 * Caller must lock the mutex.
 	 *
 	 * Throws std::runtime_error on error.
 	 *
@@ -94,11 +131,11 @@ public:
 	/**
 	 * Sets the volume.
 	 *
+	 * Caller must lock the mutex.
+	 *
 	 * Throws std::runtime_error on error.
 	 *
 	 * @param volume the new volume (0..100 including)
 	 */
 	virtual void SetVolume(unsigned volume) = 0;
 };
-
-#endif

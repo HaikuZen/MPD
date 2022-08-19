@@ -17,7 +17,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "mixer/MixerInternal.hxx"
+#include "OssMixerPlugin.hxx"
+#include "mixer/Mixer.hxx"
 #include "config/Block.hxx"
 #include "io/FileDescriptor.hxx"
 #include "system/Error.hxx"

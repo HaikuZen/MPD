@@ -17,25 +17,26 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-/** \file
- *
- * This header provides "extern" declarations for all mixer plugins.
- */
+#include "Type.hxx"
 
-#ifndef MPD_MIXER_LIST_HXX
-#define MPD_MIXER_LIST_HXX
+#include <cassert>
+#include <stdexcept>
 
-struct MixerPlugin;
+#include <string.h>
 
-extern const MixerPlugin null_mixer_plugin;
-extern const MixerPlugin software_mixer_plugin;
-extern const MixerPlugin android_mixer_plugin;
-extern const MixerPlugin alsa_mixer_plugin;
-extern const MixerPlugin oss_mixer_plugin;
-extern const MixerPlugin osx_mixer_plugin;
-extern const MixerPlugin pulse_mixer_plugin;
-extern const MixerPlugin winmm_mixer_plugin;
-extern const MixerPlugin wasapi_mixer_plugin;
-extern const MixerPlugin sndio_mixer_plugin;
+MixerType
+mixer_type_parse(const char *input)
+{
+	assert(input != nullptr);
 
-#endif
+	if (strcmp(input, "none") == 0 || strcmp(input, "disabled") == 0)
+		return MixerType::NONE;
+	else if (strcmp(input, "hardware") == 0)
+		return MixerType::HARDWARE;
+	else if (strcmp(input, "software") == 0)
+		return MixerType::SOFTWARE;
+	else if (strcmp(input, "null") == 0)
+		return MixerType::NULL_;
+	else
+		throw std::runtime_error("Unrecognized mixer type");
+}

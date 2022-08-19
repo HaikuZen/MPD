@@ -27,7 +27,7 @@
 #include "pcm/AudioParser.hxx"
 #include "pcm/AudioFormat.hxx"
 #include "pcm/Volume.hxx"
-#include "mixer/MixerControl.hxx"
+#include "mixer/Control.hxx"
 #include "system/Error.hxx"
 #include "io/FileDescriptor.hxx"
 #include "util/StringBuffer.hxx"
@@ -41,12 +41,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-
-void
-mixer_set_volume([[maybe_unused]] Mixer *mixer,
-		 [[maybe_unused]] unsigned volume)
-{
-}
 
 static std::unique_ptr<PreparedFilter>
 LoadFilter(const ConfigData &config, const char *name)

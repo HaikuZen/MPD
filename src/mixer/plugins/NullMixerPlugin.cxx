@@ -17,7 +17,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "mixer/MixerInternal.hxx"
+#include "NullMixerPlugin.hxx"
+#include "mixer/Mixer.hxx"
 
 class NullMixer final : public Mixer {
 	/**

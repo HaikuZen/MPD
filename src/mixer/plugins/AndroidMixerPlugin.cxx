@@ -17,7 +17,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "mixer/MixerInternal.hxx"
+#include "AndroidMixerPlugin.hxx"
+#include "mixer/Mixer.hxx"
 #include "filter/plugins/VolumeFilterPlugin.hxx"
 #include "pcm/Volume.hxx"
 #include "android/Context.hxx"
