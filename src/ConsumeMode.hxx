@@ -17,38 +17,28 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "StringFilter.hxx"
-#include "util/StringAPI.hxx"
+#ifndef MPD_CONSUME_MODE_HXX
+#define MPD_CONSUME_MODE_HXX
 
-#include <cassert>
+#include <cstdint>
 
-bool
-StringFilter::MatchWithoutNegation(const char *s) const noexcept
-{
-	assert(s != nullptr);
+enum class ConsumeMode : uint8_t {
+	OFF,
+	ON,
+	ONE_SHOT,
+};
 
-#ifdef HAVE_PCRE
-	if (regex)
-		return regex->Match(s);
+/**
+ * Return the string representation of a #ConsumeMode.
+ */
+[[gnu::const]]
+const char *
+ConsumeToString(ConsumeMode mode) noexcept;
+
+/**
+ * Parse a string to a #ConsumeMode.  Throws std::invalid_argument on error.
+ */
+ConsumeMode
+ConsumeFromString(const char *s);
+
 #endif
-
-	if (fold_case) {
-		return substring
-			? fold_case.IsIn(s)
-			: (starts_with
-				? fold_case.StartsWith(s)
-				: fold_case == s);
-	} else {
-		return substring
-			? StringFind(s, value.c_str()) != nullptr
-			: (starts_with
-				? StringIsEqual(s, value.c_str(), value.length())
-				: value == s);
-	}
-}
-
-bool
-StringFilter::Match(const char *s) const noexcept
-{
-	return MatchWithoutNegation(s) != negated;
-}

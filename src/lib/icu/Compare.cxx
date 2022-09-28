@@ -20,6 +20,7 @@
 #include "Compare.hxx"
 #include "CaseFold.hxx"
 #include "util/StringAPI.hxx"
+#include "util/StringCompare.hxx"
 #include "config.h"
 
 #ifdef _WIN32
@@ -110,5 +111,33 @@ IcuCompare::IsIn(const char *haystack) const noexcept
 			return true;
 
 	return false;
+#endif
+}
+
+bool
+IcuCompare::StartsWith(const char *haystack) const noexcept
+{
+#ifdef HAVE_ICU_CASE_FOLD
+	return StringStartsWith(IcuCaseFold(haystack).c_str(), needle);
+#elif defined(_WIN32)
+	if (needle == nullptr)
+		/* the MultiByteToWideChar() call in the constructor
+		   has failed, so let's always fail the comparison */
+		return false;
+
+	try {
+		auto w_haystack = MultiByteToWideChar(CP_UTF8, haystack);
+		return FindNLSStringEx(LOCALE_NAME_INVARIANT,
+				       FIND_STARTSWITH|NORM_IGNORECASE,
+				       w_haystack.c_str(), -1,
+				       needle.c_str(), -1,
+				       nullptr,
+				       nullptr, nullptr, 0) == 0;
+	} catch (...) {
+		/* MultiByteToWideChar() has failed */
+		return false;
+	}
+#else
+	return StringStartsWith(haystack, needle);
 #endif
 }

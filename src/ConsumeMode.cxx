@@ -17,38 +17,43 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include "StringFilter.hxx"
-#include "util/StringAPI.hxx"
+#include "ConsumeMode.hxx"
+#include "util/Compiler.h"
 
 #include <cassert>
+#include <stdexcept>
 
-bool
-StringFilter::MatchWithoutNegation(const char *s) const noexcept
+#include <string.h>
+
+const char *
+ConsumeToString(ConsumeMode mode) noexcept
+{
+	switch (mode) {
+	case ConsumeMode::OFF:
+		return "0";
+
+	case ConsumeMode::ON:
+		return "1";
+
+	case ConsumeMode::ONE_SHOT:
+		return "oneshot";
+	}
+
+	assert(false);
+	gcc_unreachable();
+}
+
+ConsumeMode
+ConsumeFromString(const char *s)
 {
 	assert(s != nullptr);
 
-#ifdef HAVE_PCRE
-	if (regex)
-		return regex->Match(s);
-#endif
-
-	if (fold_case) {
-		return substring
-			? fold_case.IsIn(s)
-			: (starts_with
-				? fold_case.StartsWith(s)
-				: fold_case == s);
-	} else {
-		return substring
-			? StringFind(s, value.c_str()) != nullptr
-			: (starts_with
-				? StringIsEqual(s, value.c_str(), value.length())
-				: value == s);
-	}
-}
-
-bool
-StringFilter::Match(const char *s) const noexcept
-{
-	return MatchWithoutNegation(s) != negated;
+	if (strcmp(s, "0") == 0)
+		return ConsumeMode::OFF;
+	else if (strcmp(s, "1") == 0)
+		return ConsumeMode::ON;
+	else if (strcmp(s, "oneshot") == 0)
+		return ConsumeMode::ONE_SHOT;
+	else
+		throw std::invalid_argument("Unrecognized consume mode, expected 0, 1, or oneshot");
 }

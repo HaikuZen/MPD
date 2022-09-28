@@ -196,6 +196,8 @@ of:
 - ``(TAG contains 'VALUE')`` checks if the given value is a substring
   of the tag value.
 
+- ``(TAG starts_with 'VALUE')`` checks if the tag value starts with the given value.
+
 - ``(TAG =~ 'VALUE')`` and ``(TAG !~ 'VALUE')`` use a Perl-compatible
   regular expression instead of doing a simple string comparison.
   (This feature is only available if :program:`MPD` was compiled with
@@ -470,7 +472,7 @@ Querying :program:`MPD`'s status
     - ``repeat``: ``0`` or ``1``
     - ``random``: ``0`` or ``1``
     - ``single`` [#since_0_15]_: ``0``, ``1``, or ``oneshot`` [#since_0_21]_
-    - ``consume`` [#since_0_15]_: ``0`` or ``1``
+    - ``consume`` [#since_0_15]_: ``0``, ``1`` or ``oneshot`` [#since_0_24]_
     - ``playlist``: 31-bit unsigned integer, the playlist version number
     - ``playlistlength``: integer, the length of the playlist
     - ``state``: ``play``, ``stop``, or ``pause``
@@ -518,7 +520,7 @@ Playback options
 
 :command:`consume {STATE}` [#since_0_15]_
     Sets consume state to ``STATE``,
-    ``STATE`` should be 0 or 1.
+    ``STATE`` should be ``0``, ``1`` or ``oneshot`` [#since_0_24]_.
     When consume is activated, each song played is removed from playlist.
 
 .. _command_crossfade:
@@ -1599,6 +1601,8 @@ Reflection
     The following response attributes are available:
 
     - ``music_directory``: The absolute path of the music directory.
+    - ``playlist_directory``: The absolute path of the playlist directory.
+    - ``pcre``: Indicates pcre support.
 
 .. _command_commands:
 
@@ -1693,3 +1697,4 @@ client-to-client messages are local to the current partition.
 .. [#since_0_23_3] Since :program:`MPD` 0.23.3
 .. [#since_0_23_4] Since :program:`MPD` 0.23.4
 .. [#since_0_23_5] Since :program:`MPD` 0.23.5
+.. [#since_0_24] Since :program:`MPD` 0.24
