@@ -179,20 +179,20 @@ EventLoop::HandleTimers() noexcept
 }
 
 void
-EventLoop::AddDefer(DeferEvent &d) noexcept
+EventLoop::AddDefer(DeferEvent &e) noexcept
 {
 #ifdef HAVE_THREADED_EVENT_LOOP
 	assert(!IsAlive() || IsInside());
 #endif
 
-	defer.push_back(d);
+	defer.push_back(e);
 	again = true;
 }
 
 void
 EventLoop::AddIdle(DeferEvent &e) noexcept
 {
-	idle.push_front(e);
+	idle.push_back(e);
 	again = true;
 }
 
@@ -296,7 +296,7 @@ EventLoop::Run() noexcept
 	};
 #endif
 
-	steady_clock_cache.flush();
+	FlushClockCaches();
 
 	do {
 		again = false;
@@ -341,7 +341,7 @@ EventLoop::Run() noexcept
 
 		Wait(timeout);
 
-		steady_clock_cache.flush();
+		FlushClockCaches();
 
 #ifdef HAVE_THREADED_EVENT_LOOP
 		{

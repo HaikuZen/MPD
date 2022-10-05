@@ -96,8 +96,8 @@ class EventLoop final
 	SocketList sockets;
 
 	/**
-	 * A linked list of #SocketEvent instances which have a
-	 * non-zero "ready_flags" field, and need to be dispatched.
+	 * A list of #SocketEvent instances which have a non-zero
+	 * "ready_flags" field, and need to be dispatched.
 	 */
 	SocketList ready_sockets;
 
@@ -182,6 +182,10 @@ public:
 		return steady_clock_cache.now();
 	}
 
+	void FlushClockCaches() noexcept {
+		steady_clock_cache.flush();
+	}
+
 #ifdef HAVE_URING
 	[[gnu::pure]]
 	Uring::Queue *GetUring() noexcept;
@@ -211,7 +215,7 @@ public:
 	/**
 	 * Schedule a call to DeferEvent::RunDeferred().
 	 */
-	void AddDefer(DeferEvent &d) noexcept;
+	void AddDefer(DeferEvent &e) noexcept;
 	void AddIdle(DeferEvent &e) noexcept;
 
 #ifdef HAVE_THREADED_EVENT_LOOP

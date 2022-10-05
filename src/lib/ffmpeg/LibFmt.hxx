@@ -17,33 +17,23 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef MPD_PLAYLIST_SAVE_H
-#define MPD_PLAYLIST_SAVE_H
+#pragma once
 
-struct Queue;
-struct playlist;
-class BufferedOutputStream;
-class DetachedSong;
+extern "C" {
+#include <libavutil/samplefmt.h>
+}
 
-void
-playlist_print_song(BufferedOutputStream &os, const DetachedSong &song);
+#include <fmt/format.h>
 
-void
-playlist_print_uri(BufferedOutputStream &os, const char *uri);
+template<>
+struct fmt::formatter<AVSampleFormat> : formatter<string_view>
+{
+	template<typename FormatContext>
+	auto format(const AVSampleFormat format, FormatContext &ctx) {
+		const char *name = av_get_sample_fmt_name(format);
+		if (name == nullptr)
+			name = "?";
 
-enum class PlaylistSaveMode {
-	CREATE,
-	APPEND,
-	REPLACE
+		return formatter<string_view>::format(name, ctx);
+	}
 };
-
-void
-spl_save_queue(const char *name_utf8, PlaylistSaveMode save_mode, const Queue &queue);
-
-/**
- * Saves a playlist object into a stored playlist file.
- */
-void
-spl_save_playlist(const char *name_utf8, PlaylistSaveMode save_mode, const playlist &playlist);
-
-#endif
