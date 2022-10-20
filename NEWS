@@ -8,6 +8,8 @@ ver 0.24 (not yet released)
   - show PCRE support in "config" response
 * archive
   - add option to disable archive plugins in mpd.conf
+* input
+  - curl: add "connect_timeout" configuration
 * decoder
   - hybrid_dsd: remove
   - opus: implement bitrate calculation
@@ -22,11 +24,15 @@ ver 0.24 (not yet released)
 * static partition configuration
 * remove Haiku support
 
-ver 0.23.10 (not yet released)
+ver 0.23.10 (2022/10/14)
+* storage
+  - curl: fix file time stamps
 * decoder
   - ffmpeg: fix libfmt 9 compiler warning
 * encoder
   - flac: fix failure when libFLAC is built without Ogg support
+* output
+  - alsa: fix crash bug
 * Windows
   - log to stdout by default, don't require "log_file" setting
 
