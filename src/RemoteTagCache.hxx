@@ -24,9 +24,8 @@
 #include "tag/Tag.hxx"
 #include "event/InjectEvent.hxx"
 #include "thread/Mutex.hxx"
-
-#include <boost/intrusive/list.hpp>
-#include <boost/intrusive/unordered_set.hpp>
+#include "util/IntrusiveList.hxx"
+#include "util/IntrusiveHashSet.hxx"
 
 #include <string>
 
@@ -45,8 +44,8 @@ class RemoteTagCache final {
 	Mutex mutex;
 
 	struct Item final
-		: public boost::intrusive::unordered_set_base_hook<boost::intrusive::link_mode<boost::intrusive::normal_link>>,
-		  public boost::intrusive::list_base_hook<boost::intrusive::link_mode<boost::intrusive::normal_link>>,
+		: public IntrusiveHashSetHook<>,
+		  public IntrusiveListHook<>,
 		  RemoteTagHandler
 	{
 		RemoteTagCache &parent;
@@ -89,8 +88,7 @@ class RemoteTagCache final {
 		};
 	};
 
-	typedef boost::intrusive::list<Item,
-				       boost::intrusive::constant_time_size<false>> ItemList;
+	using ItemList = IntrusiveList<Item>;
 
 	/**
 	 * These items have been resolved completely (successful or
@@ -114,12 +112,9 @@ class RemoteTagCache final {
 	 */
 	ItemList invoke_list;
 
-	typedef boost::intrusive::unordered_set<Item,
-						boost::intrusive::hash<Item::Hash>,
-						boost::intrusive::equal<Item::Equal>,
-						boost::intrusive::constant_time_size<true>> KeyMap;
-
-	std::array<typename KeyMap::bucket_type, 127> buckets;
+	using KeyMap = IntrusiveHashSet<Item, 127, Item::Hash, Item::Equal,
+					IntrusiveHashSetBaseHookTraits<Item>,
+					true>;
 
 	KeyMap map;
 

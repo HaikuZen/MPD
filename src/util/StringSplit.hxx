@@ -29,11 +29,41 @@
 
 #pragma once
 
+#include <algorithm>
 #include <string_view>
+#include <type_traits>
 
 template<typename T>
-[[gnu::pure]]
-std::pair<std::basic_string_view<T>, std::basic_string_view<T>>
+constexpr std::pair<std::basic_string_view<T>, std::basic_string_view<T>>
+Partition(const std::basic_string_view<T> haystack,
+	  const typename std::basic_string_view<T>::size_type position) noexcept
+{
+	return {
+		haystack.substr(0, position),
+		haystack.substr(position),
+	};
+}
+
+template<typename T>
+constexpr std::pair<std::basic_string_view<T>, std::basic_string_view<T>>
+Partition(const std::basic_string_view<T> haystack,
+	  const typename std::basic_string_view<T>::const_pointer position) noexcept
+{
+	return Partition(haystack, position - haystack.data());
+}
+
+template<typename T>
+requires(!std::is_same_v<typename std::basic_string_view<T>::const_pointer,
+	 typename std::basic_string_view<T>::const_iterator>)
+constexpr std::pair<std::basic_string_view<T>, std::basic_string_view<T>>
+Partition(const std::basic_string_view<T> haystack,
+	  const typename std::basic_string_view<T>::const_iterator i) noexcept
+{
+	return Partition(haystack, i - haystack.begin());
+}
+
+template<typename T>
+constexpr std::pair<std::basic_string_view<T>, std::basic_string_view<T>>
 PartitionWithout(const std::basic_string_view<T> haystack,
 		 const typename std::basic_string_view<T>::size_type separator) noexcept
 {
@@ -49,8 +79,7 @@ PartitionWithout(const std::basic_string_view<T> haystack,
  * string and the second value is nullptr.
  */
 template<typename T>
-[[gnu::pure]]
-std::pair<std::basic_string_view<T>, std::basic_string_view<T>>
+constexpr std::pair<std::basic_string_view<T>, std::basic_string_view<T>>
 Split(const std::basic_string_view<T> haystack, const T ch) noexcept
 {
 	const auto i = haystack.find(ch);
@@ -66,8 +95,7 @@ Split(const std::basic_string_view<T> haystack, const T ch) noexcept
  * value is the whole string and the second value is nullptr.
  */
 template<typename T>
-[[gnu::pure]]
-std::pair<std::basic_string_view<T>, std::basic_string_view<T>>
+constexpr std::pair<std::basic_string_view<T>, std::basic_string_view<T>>
 SplitLast(const std::basic_string_view<T> haystack, const T ch) noexcept
 {
 	const auto i = haystack.rfind(ch);
@@ -75,4 +103,17 @@ SplitLast(const std::basic_string_view<T> haystack, const T ch) noexcept
 		return {haystack, {}};
 
 	return PartitionWithout(haystack, i);
+}
+
+/**
+ * Find the first character that does not match the given predicate
+ * and split at this boundary.
+ */
+template<typename T, typename P>
+constexpr std::pair<std::basic_string_view<T>, std::basic_string_view<T>>
+SplitWhile(const std::basic_string_view<T> haystack, P &&predicate) noexcept
+{
+	const auto i = std::find_if_not(haystack.begin(), haystack.end(),
+					std::forward<P>(predicate));
+	return Partition(haystack, i);
 }

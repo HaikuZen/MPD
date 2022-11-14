@@ -30,54 +30,14 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "Loop.hxx"
-#include "FineTimerEvent.hxx"
+#ifndef SHALLOW_COPY_HXX
+#define SHALLOW_COPY_HXX
 
-#ifdef NO_BOOST
-#include <algorithm>
+/**
+ * A tag for overloading copying constructors, telling them to make
+ * shallow copies of source data (e.g. copy pointers instead of
+ * duplicating the referenced objects).
+ */
+struct ShallowCopy {};
+
 #endif
-
-constexpr bool
-TimerList::Compare::operator()(const FineTimerEvent &a,
-			       const FineTimerEvent &b) const noexcept
-{
-	return a.due < b.due;
-}
-
-TimerList::TimerList() = default;
-
-TimerList::~TimerList() noexcept
-{
-	assert(timers.empty());
-}
-
-void
-TimerList::Insert(FineTimerEvent &t) noexcept
-{
-	timers.insert(t);
-}
-
-Event::Duration
-TimerList::Run(const Event::TimePoint now) noexcept
-{
-	while (true) {
-		auto i = timers.begin();
-		if (i == timers.end())
-			break;
-
-		auto &t = *i;
-		const auto timeout = t.due - now;
-		if (timeout > timeout.zero())
-			return timeout;
-
-#ifdef NO_BOOST
-		t.Cancel();
-#else
-		timers.erase(i);
-#endif
-
-		t.Run();
-	}
-
-	return Event::Duration(-1);
-}

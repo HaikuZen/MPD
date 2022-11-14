@@ -1,8 +1,5 @@
 /*
- * Copyright 2007-2022 CM4all GmbH
- * All rights reserved.
- *
- * author: Max Kellermann <mk@cm4all.com>
+ * Copyright 2022 Max Kellermann <max.kellermann@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,54 +27,52 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "Loop.hxx"
-#include "FineTimerEvent.hxx"
+#include "util/IntrusiveForwardList.hxx"
 
-#ifdef NO_BOOST
-#include <algorithm>
-#endif
+#include <gtest/gtest.h>
 
-constexpr bool
-TimerList::Compare::operator()(const FineTimerEvent &a,
-			       const FineTimerEvent &b) const noexcept
+#include <string>
+
+namespace {
+
+struct CharItem final : IntrusiveForwardListHook {
+	char ch;
+
+	constexpr CharItem(char _ch) noexcept:ch(_ch) {}
+};
+
+static std::string
+ToString(const IntrusiveForwardList<CharItem> &list) noexcept
 {
-	return a.due < b.due;
+	std::string result;
+	for (const auto &i : list)
+		result.push_back(i.ch);
+	return result;
 }
 
-TimerList::TimerList() = default;
+} // anonymous namespace
 
-TimerList::~TimerList() noexcept
+TEST(IntrusiveForwardList, Basic)
 {
-	assert(timers.empty());
-}
+	using Item = CharItem;
 
-void
-TimerList::Insert(FineTimerEvent &t) noexcept
-{
-	timers.insert(t);
-}
+	Item items[]{'a', 'b', 'c'};
 
-Event::Duration
-TimerList::Run(const Event::TimePoint now) noexcept
-{
-	while (true) {
-		auto i = timers.begin();
-		if (i == timers.end())
-			break;
+	IntrusiveForwardList<CharItem> list;
+	ASSERT_EQ(ToString(list), "");
+	list.reverse();
+	ASSERT_EQ(ToString(list), "");
 
-		auto &t = *i;
-		const auto timeout = t.due - now;
-		if (timeout > timeout.zero())
-			return timeout;
+	for (auto &i : items)
+		list.push_front(i);
 
-#ifdef NO_BOOST
-		t.Cancel();
-#else
-		timers.erase(i);
-#endif
+	ASSERT_EQ(ToString(list), "cba");
 
-		t.Run();
-	}
+	list.reverse();
+	ASSERT_EQ(ToString(list), "abc");
 
-	return Event::Duration(-1);
+	list.pop_front();
+	ASSERT_EQ(ToString(list), "bc");
+	list.reverse();
+	ASSERT_EQ(ToString(list), "cb");
 }
