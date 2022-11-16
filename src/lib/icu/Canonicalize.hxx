@@ -17,21 +17,34 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef MPD_ICU_CASE_FOLD_HXX
-#define MPD_ICU_CASE_FOLD_HXX
+#pragma once
 
 #include "config.h"
 
 #ifdef HAVE_ICU
-#define HAVE_ICU_CASE_FOLD
+#define HAVE_ICU_CANONICALIZE
 
 #include <string_view>
 
 class AllocatedString;
 
-AllocatedString
-IcuCaseFold(std::string_view src) noexcept;
+/**
+ * Throws on error.
+ */
+void
+IcuCanonicalizeInit();
 
-#endif
+void
+IcuCanonicalizeFinish() noexcept;
+
+/**
+ * Transform the given string to "canonical" form to allow fuzzy
+ * string comparisons.  The full set of features (if ICU is being
+ * used):
+ *
+ * - case folding (optional)
+ */
+AllocatedString
+IcuCanonicalize(std::string_view src, bool fold_case) noexcept;
 
 #endif
