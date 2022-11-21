@@ -34,15 +34,7 @@
 #include "Instance.hxx"
 #include "Log.hxx"
 
-#ifdef __clang__
-/* ignore -Wcomma due to strange code in boost/array.hpp (in Boost
-   1.72) */
-#pragma GCC diagnostic ignored "-Wcomma"
-#endif
-
-#include <boost/crc.hpp>
-
-#include <set>
+#include <functional> // for std::hash()
 
 #define MOUNT_STATE_BEGIN        "mount_begin"
 #define MOUNT_STATE_END          "mount_end"
@@ -73,7 +65,8 @@ storage_state_save(BufferedOutputStream &os, const Instance &instance)
 }
 
 bool
-storage_state_restore(const char *line, LineReader &file, Instance &instance)
+storage_state_restore(const char *line, LineReader &file,
+		      Instance &instance) noexcept
 {
 	if (!StringStartsWith(line, MOUNT_STATE_BEGIN))
 		return false;
@@ -144,24 +137,21 @@ storage_state_restore(const char *line, LineReader &file, Instance &instance)
 }
 
 unsigned
-storage_state_get_hash(const Instance &instance)
+storage_state_get_hash(const Instance &instance) noexcept
 {
 	if (instance.storage == nullptr)
 		return 0;
 
-	std::set<std::string> mounts;
+	unsigned result = 0;
 
-	const auto visitor = [&mounts](const char *mount_uri, const Storage &storage) {
-		mounts.emplace(std::string(mount_uri) + ":" + storage.MapUTF8(""));
+	const std::hash<std::string_view> hash;
+
+	const auto visitor = [&result, &hash](const char *mount_uri, const Storage &storage) {
+		result = result * 33 + hash(mount_uri);
+		result = result * 33 + hash(storage.MapUTF8(""));
 	};
 
 	((CompositeStorage*)instance.storage)->VisitMounts(visitor);
 
-	boost::crc_32_type result;
-
-	for (const auto& mount : mounts) {
-		result.process_bytes(mount.c_str(), mount.length());
-	}
-
-	return result.checksum();
+	return result;
 }
