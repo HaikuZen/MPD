@@ -109,7 +109,7 @@ class IntrusiveHashSet {
 	[[no_unique_address]]
 	Equal equal;
 
-	struct SlotHookTraits {
+	struct BucketHookTraits {
 		template<typename U>
 		using HashSetHook = typename HookTraits::template Hook<U>;
 
@@ -130,10 +130,10 @@ class IntrusiveHashSet {
 		}
 	};
 
-	using Slot = IntrusiveList<T, SlotHookTraits>;
-	std::array<Slot, table_size> table;
+	using Bucket = IntrusiveList<T, BucketHookTraits>;
+	std::array<Bucket, table_size> table;
 
-	using slot_iterator = typename Slot::iterator;
+	using bucket_iterator = typename Bucket::iterator;
 
 public:
 	using value_type = T;
@@ -164,8 +164,8 @@ public:
 		if constexpr (constant_time_size)
 			return size() == 0;
 		else
-			return std::all_of(table.begin(), table.end(), [](const auto &slot){
-				return slot.empty();
+			return std::all_of(table.begin(), table.end(), [](const auto &bucket){
+				return bucket.empty();
 			});
 	}
 
@@ -174,8 +174,8 @@ public:
 		if constexpr (constant_time_size)
 			return counter;
 		else
-			return std::accumulate(table.begin(), table.end(), size_type{}, [](std::size_t n, const auto &slot){
-				return n + slot.size();
+			return std::accumulate(table.begin(), table.end(), size_type{}, [](std::size_t n, const auto &bucket){
+				return n + bucket.size();
 			});
 	}
 
@@ -194,55 +194,81 @@ public:
 		counter.reset();
 	}
 
+	void remove_and_dispose_if(auto &&pred, auto &&disposer) noexcept {
+		static_assert(!constant_time_size, "Not yet implemented");
+
+		for (auto &bucket : table)
+			bucket.remove_and_dispose_if(pred, disposer);
+	}
+
 	[[nodiscard]]
-	static constexpr slot_iterator iterator_to(reference item) noexcept {
-		return Slot::iterator_to(item);
+	static constexpr bucket_iterator iterator_to(reference item) noexcept {
+		return Bucket::iterator_to(item);
 	}
 
 	[[nodiscard]] [[gnu::pure]]
-	constexpr std::pair<slot_iterator, bool> insert_check(const auto &key) noexcept {
-		auto &slot = GetSlot(key);
-		for (auto &i : slot)
+	constexpr std::pair<bucket_iterator, bool> insert_check(const auto &key) noexcept {
+		auto &bucket = GetBucket(key);
+		for (auto &i : bucket)
 			if (equal(key, i))
-				return {slot.iterator_to(i), false};
+				return {bucket.iterator_to(i), false};
 
-		return {slot.begin(), true};
+		return {bucket.begin(), true};
 	}
 
-	constexpr void insert(slot_iterator slot, reference item) noexcept {
+	constexpr void insert(bucket_iterator bucket, reference item) noexcept {
 		++counter;
-		GetSlot(item).insert(slot, item);
+		GetBucket(item).insert(bucket, item);
 	}
 
 	constexpr void insert(reference item) noexcept {
 		++counter;
-		GetSlot(item).push_front(item);
+		GetBucket(item).push_front(item);
 	}
 
-	constexpr slot_iterator erase(slot_iterator i) noexcept {
+	constexpr bucket_iterator erase(bucket_iterator i) noexcept {
 		--counter;
-		return GetSlot(*i).erase(i);
+		return GetBucket(*i).erase(i);
+	}
+
+	constexpr bucket_iterator erase_and_dispose(bucket_iterator i,
+						    auto &&disposer) noexcept {
+		auto result = erase(i);
+		disposer(&*i);
+		return result;
 	}
 
 	[[nodiscard]] [[gnu::pure]]
-	constexpr slot_iterator find(const auto &key) noexcept {
-		auto &slot = GetSlot(key);
-		for (auto &i : slot)
+	constexpr bucket_iterator find(const auto &key) noexcept {
+		auto &bucket = GetBucket(key);
+		for (auto &i : bucket)
 			if (equal(key, i))
-				return slot.iterator_to(i);
+				return bucket.iterator_to(i);
 
 		return end();
 	}
 
-	constexpr slot_iterator end() noexcept {
+	constexpr bucket_iterator end() noexcept {
 		return table.front().end();
+	}
+
+	constexpr void for_each(auto &&f) {
+		for (auto &bucket : table)
+			for (auto &i : bucket)
+				f(i);
+	}
+
+	constexpr void for_each(auto &&f) const {
+		for (const auto &bucket : table)
+			for (const auto &i : bucket)
+				f(i);
 	}
 
 private:
 	template<typename K>
 	[[gnu::pure]]
 	[[nodiscard]]
-	constexpr auto &GetSlot(K &&key) noexcept {
+	constexpr auto &GetBucket(K &&key) noexcept {
 		const auto h = hash(std::forward<K>(key));
 		return table[h % table_size];
 	}
