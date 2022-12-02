@@ -18,6 +18,7 @@
  */
 
 #include "system/Error.hxx"
+#include "lib/fmt/RuntimeError.hxx"
 
 /* sorry for this horrible piece of code - there's no elegant way to
    load DLLs at runtime */
@@ -102,7 +103,7 @@ GetFunction(HMODULE h, const char *name, T &result)
 {
 	auto f = GetProcAddress(h, name);
 	if (f == nullptr)
-		throw FormatRuntimeError("No such libjack function: %s", name);
+		throw FmtRuntimeError("No such libjack function: {}", name);
 
 	result = reinterpret_cast<T>(f);
 }
@@ -118,7 +119,7 @@ LoadJackLibrary()
 
 	auto libjack = LoadLibraryA(LIBJACK);
 	if (!libjack)
-		throw FormatLastError("Failed to load " LIBJACK ".dll");
+		throw MakeLastError("Failed to load " LIBJACK ".dll");
 
 	GetFunction(libjack, "jack_set_error_function", _jack_set_error_function);
 	GetFunction(libjack, "jack_set_info_function", _jack_set_info_function);

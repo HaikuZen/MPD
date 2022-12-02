@@ -24,9 +24,9 @@
 #endif
 #include "lib/upnp/UniqueIxml.hxx"
 #include "lib/upnp/Action.hxx"
+#include "lib/upnp/Error.hxx"
 #include "Directory.hxx"
 #include "util/NumberParser.hxx"
-#include "util/RuntimeError.hxx"
 #include "util/ScopeExit.hxx"
 #include "util/StringFormat.hxx"
 
@@ -72,8 +72,7 @@ ContentDirectoryService::readDirSlice(UpnpClient_Handle hdl,
 	int code = UpnpSendAction(hdl, m_actionURL.c_str(), m_serviceType.c_str(),
 				  nullptr /*devUDN*/, request, &response);
 	if (code != UPNP_E_SUCCESS)
-		throw FormatRuntimeError("UpnpSendAction() failed: %s",
-					 UpnpGetErrorMessage(code));
+		throw Upnp::MakeError(code, "UpnpSendAction() failed");
 
 	AtScopeExit(response) { ixmlDocument_free(response); };
 
@@ -101,8 +100,8 @@ ContentDirectoryService::readDirSlice(UpnpClient_Handle hdl,
 	int code = UpnpSendAction(hdl, "", m_actionURL, m_serviceType, "Browse",
 				  actionParams, responseData, &errcode, errdesc);
 	if (code != UPNP_E_SUCCESS)
-		throw FormatRuntimeError("UpnpSendAction() failed: %s",
-					 UpnpGetErrorMessage(code));
+		throw Upnp::MakeError(code, "UpnpSendAction() failed");
+
 	const char *p = "";
 	didreadp = 0;
 	for (const auto &entry : responseData) {
@@ -162,8 +161,7 @@ ContentDirectoryService::search(UpnpClient_Handle hdl,
 					   nullptr /*devUDN*/,
 					   request.get(), &_response);
 		if (code != UPNP_E_SUCCESS)
-			throw FormatRuntimeError("UpnpSendAction() failed: %s",
-						 UpnpGetErrorMessage(code));
+			throw Upnp::MakeError(code, "UpnpSendAction() failed");
 
 		UniqueIxmlDocument response(_response);
 
@@ -196,8 +194,8 @@ ContentDirectoryService::search(UpnpClient_Handle hdl,
 		int code = UpnpSendAction(hdl, "", m_actionURL, m_serviceType, "Search",
 					  actionParams, responseData, &errcode, errdesc);
 		if (code != UPNP_E_SUCCESS)
-			throw FormatRuntimeError("UpnpSendAction() failed: %s",
-						 UpnpGetErrorMessage(code));
+			throw Upnp::MakeError(code, "UpnpSendAction() failed");
+
 		const char *p = "";
 		count = 0;
 		for (const auto &entry : responseData) {
@@ -238,8 +236,7 @@ ContentDirectoryService::getMetadata(UpnpClient_Handle hdl,
 				   m_serviceType.c_str(),
 				   nullptr /*devUDN*/, request.get(), &_response);
 	if (code != UPNP_E_SUCCESS)
-		throw FormatRuntimeError("UpnpSendAction() failed: %s",
-					 UpnpGetErrorMessage(code));
+		throw Upnp::MakeError(code, "UpnpSendAction() failed");
 
 	UniqueIxmlDocument response(_response);
 	UPnPDirContent dirbuf;
@@ -256,8 +253,8 @@ ContentDirectoryService::getMetadata(UpnpClient_Handle hdl,
 	int code = UpnpSendAction(hdl, "", m_actionURL, m_serviceType, "Browse",
 				  actionParams, responseData, &errcode, errdesc);
 	if (code != UPNP_E_SUCCESS)
-		throw FormatRuntimeError("UpnpSendAction() failed: %s",
-					 UpnpGetErrorMessage(code));
+		throw Upnp::MakeError(code, "UpnpSendAction() failed");
+
 	auto it = std::find_if(responseData.begin(), responseData.end(), [](auto&& entry){ return entry.first == "Result"; });
 	const char *p = it != responseData.end() ? it->second.c_str() : "";
 	UPnPDirContent dirbuf;

@@ -19,9 +19,10 @@
 
 #include "config.h"
 #include "Daemon.hxx"
-#include "system/Error.hxx"
+#include "lib/fmt/PathFormatter.hxx"
+#include "lib/fmt/RuntimeError.hxx"
+#include "lib/fmt/SystemError.hxx"
 #include "fs/AllocatedPath.hxx"
-#include "util/RuntimeError.hxx"
 
 #ifndef _WIN32
 #include "PidFile.hxx"
@@ -70,14 +71,12 @@ daemonize_kill()
 		throw std::runtime_error("no pid_file specified in the config file");
 
 	const pid_t pid = ReadPidFile(pidfile);
-	if (pid < 0) {
-		const std::string utf8 = pidfile.ToUTF8();
-		throw FormatErrno("unable to read the pid from file \"%s\"",
-				  utf8.c_str());
-	}
+	if (pid < 0)
+		throw FmtErrno("unable to read the pid from file \"{}\"",
+			       pidfile);
 
 	if (kill(pid, SIGTERM) < 0)
-		throw FormatErrno("unable to kill process %i", int(pid));
+		throw FmtErrno("unable to kill process {}", pid);
 
 	std::exit(EXIT_SUCCESS);
 }
@@ -98,7 +97,7 @@ daemonize_set_user()
 	/* set gid */
 	if (user_gid != (gid_t)-1 && user_gid != getgid() &&
 	    setgid(user_gid) == -1) {
-		throw FormatErrno("Failed to set group %d", (int)user_gid);
+		throw FmtErrno("Failed to set group {}", user_gid);
 	}
 
 #ifdef HAVE_INITGROUPS
@@ -110,16 +109,16 @@ daemonize_set_user()
 	       we are already this user */
 	    user_uid != getuid() &&
 	    initgroups(user_name, user_gid) == -1) {
-		throw FormatErrno("Failed to set supplementary groups "
-				  "of user \"%s\"",
-				  user_name);
+		throw FmtErrno("Failed to set supplementary groups "
+			       "of user \"{}\"",
+			       user_name);
 	}
 #endif
 
 	/* set uid */
 	if (user_uid != (uid_t)-1 && user_uid != getuid() &&
 	    setuid(user_uid) == -1) {
-		throw FormatErrno("Failed to set user \"%s\"", user_name);
+		throw FmtErrno("Failed to set user \"{}\"", user_name);
 	}
 }
 
@@ -191,8 +190,8 @@ daemonize_begin(bool detach)
 		throw MakeErrno("waitpid() failed");
 
 	if (WIFSIGNALED(status))
-		throw FormatErrno("MPD died from signal %d%s", WTERMSIG(status),
-				  WCOREDUMP(status) ? " (core dumped)" : "");
+		throw FmtErrno("MPD died from signal {}{}", WTERMSIG(status),
+			       WCOREDUMP(status) ? " (core dumped)" : "");
 
 	std::exit(WEXITSTATUS(status));
 }
@@ -218,7 +217,7 @@ daemonize_init(const char *user, const char *group, AllocatedPath &&_pidfile)
 	if (user) {
 		struct passwd *pwd = getpwnam(user);
 		if (pwd == nullptr)
-			throw FormatRuntimeError("no such user \"%s\"", user);
+			throw FmtRuntimeError("no such user \"{}\"", user);
 
 		user_uid = pwd->pw_uid;
 		user_gid = pwd->pw_gid;
@@ -232,8 +231,7 @@ daemonize_init(const char *user, const char *group, AllocatedPath &&_pidfile)
 	if (group) {
 		struct group *grp = getgrnam(group);
 		if (grp == nullptr)
-			throw FormatRuntimeError("no such group \"%s\"",
-						 group);
+			throw FmtRuntimeError("no such group \"{}\"", group);
 		user_gid = grp->gr_gid;
 		had_group = true;
 	}

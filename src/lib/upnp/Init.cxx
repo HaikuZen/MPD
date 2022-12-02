@@ -19,8 +19,8 @@
 
 #include "Init.hxx"
 #include "Compat.hxx"
+#include "Error.hxx"
 #include "thread/Mutex.hxx"
-#include "util/RuntimeError.hxx"
 
 #include <upnptools.h>
 #ifdef USING_PUPNP
@@ -36,8 +36,7 @@ static void
 DoInit(const char* iface)
 {
 	if (auto code = UpnpInit2(iface, 0); code != UPNP_E_SUCCESS)
-		throw FormatRuntimeError("UpnpInit() failed: %s",
-					 UpnpGetErrorMessage(code));
+		throw Upnp::MakeError(code, "UpnpInit() failed");
 
 	UpnpSetMaxContentLength(2000*1024);
 

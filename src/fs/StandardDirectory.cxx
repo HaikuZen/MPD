@@ -39,6 +39,7 @@
 #endif
 
 #ifdef USE_XDG
+#include "util/StringSplit.hxx"
 #include "util/StringStrip.hxx"
 #include "util/StringCompare.hxx"
 #include "fs/io/TextFile.hxx"
@@ -53,6 +54,14 @@
 #include "Main.hxx"
 #endif
 
+#ifdef USE_XDG
+#include "Version.h" // for PACKAGE_NAME
+#define APP_FILENAME PATH_LITERAL(PACKAGE_NAME)
+static constexpr Path app_filename = Path::FromFS(APP_FILENAME);
+#endif
+
+using std::string_view_literals::operator""sv;
+
 #if !defined(_WIN32) && !defined(ANDROID)
 class PasswdEntry
 {
@@ -63,9 +72,9 @@ class PasswdEntry
 
 	passwd *result{nullptr};
 public:
-	PasswdEntry() = default;
+	PasswdEntry() noexcept = default;
 
-	bool ReadByName(const char *name) {
+	bool ReadByName(const char *name) noexcept {
 #ifdef HAVE_GETPWNAM_R
 		getpwnam_r(name, &pw, buf.data(), buf.size(), &result);
 #else
@@ -74,7 +83,7 @@ public:
 		return result != nullptr;
 	}
 
-	bool ReadByUid(uid_t uid) {
+	bool ReadByUid(uid_t uid) noexcept {
 #ifdef HAVE_GETPWUID_R
 		getpwuid_r(uid, &pw, buf.data(), buf.size(), &result);
 #else
@@ -83,7 +92,7 @@ public:
 		return result != nullptr;
 	}
 
-	const passwd *operator->() {
+	const passwd *operator->() noexcept {
 		assert(result != nullptr);
 		return result;
 	}
@@ -91,30 +100,40 @@ public:
 #endif
 
 #ifndef ANDROID
+
+[[gnu::pure]]
 static inline bool
-IsValidPathString(PathTraitsFS::const_pointer path)
+IsValidPathString(PathTraitsFS::const_pointer path) noexcept
 {
 	return path != nullptr && *path != '\0';
 }
 
+[[gnu::pure]]
 static inline bool
-IsValidDir(PathTraitsFS::const_pointer dir)
+IsValidDir(Path path) noexcept
 {
-	return PathTraitsFS::IsAbsolute(dir) &&
-	       DirectoryExists(Path::FromFS(dir));
+	return path.IsAbsolute() && DirectoryExists(path);
 }
 
+[[gnu::pure]]
 static inline AllocatedPath
-SafePathFromFS(PathTraitsFS::const_pointer dir)
+SafePathFromFS(PathTraitsFS::const_pointer dir) noexcept
 {
-	if (IsValidPathString(dir) && IsValidDir(dir))
-		return AllocatedPath::FromFS(dir);
+	if (!IsValidPathString(dir))
+		return nullptr;
+
+	if (const Path path = Path::FromFS(dir); IsValidDir(path))
+		return AllocatedPath{path};
+
 	return nullptr;
 }
 #endif
 
 #ifdef _WIN32
-static AllocatedPath GetStandardDir(int folder_id)
+
+[[gnu::pure]]
+static AllocatedPath
+GetStandardDir(int folder_id) noexcept
 {
 	std::array<PathTraitsFS::value_type, MAX_PATH> dir;
 	auto ret = SHGetFolderPath(nullptr, folder_id | CSIDL_FLAG_DONT_VERIFY,
@@ -123,79 +142,105 @@ static AllocatedPath GetStandardDir(int folder_id)
 		return nullptr;
 	return SafePathFromFS(dir.data());
 }
+
+#endif
+
+#if !defined(_WIN32) && !defined(ANDROID)
+
+[[gnu::pure]]
+static Path
+GetEnvPath(const char *name) noexcept
+{
+	if (const char *value = getenv(name); IsValidPathString(value))
+		return Path::FromFS(value);
+
+	return nullptr;
+}
+
+[[gnu::pure]]
+static Path
+GetAbsoluteEnvPath(const char *name) noexcept
+{
+	if (const auto path = GetEnvPath(name);
+	    path != nullptr && path.IsAbsolute())
+		return path;
+
+	return nullptr;
+}
+
+[[gnu::pure]]
+static Path
+GetExistingEnvDirectory(const char *name) noexcept
+{
+	if (const auto path = GetAbsoluteEnvPath(name);
+	    path != nullptr && DirectoryExists(path))
+		return path;
+
+	return nullptr;
+}
+
 #endif
 
 #ifdef USE_XDG
 
-static const char home_prefix[] = "$HOME/";
-
 static bool
-ParseConfigLine(char *line, const char *dir_name, AllocatedPath &result_dir)
+ParseConfigLine(std::string_view line, std::string_view dir_name,
+		AllocatedPath &result_dir) noexcept
 {
 	// strip leading white space
 	line = StripLeft(line);
 
 	// check for end-of-line or comment
-	if (*line == '\0' || *line == '#')
+	if (line.empty() || line.front() == '#')
 		return false;
 
 	// check if current setting is for requested dir
-	if (!StringStartsWith(line, dir_name))
+	if (!SkipPrefix(line, dir_name))
 		return false;
-	line += strlen(dir_name);
 
 	// strip equals sign and spaces around it
 	line = StripLeft(line);
-	if (*line != '=')
+	if (!SkipPrefix(line, "="sv))
 		return false;
-	++line;
 	line = StripLeft(line);
 
+	if (line.empty())
+		return true;
+
 	// check if path is quoted
-	bool quoted = false;
-	if (*line == '"') {
-		++line;
-		quoted = true;
-	}
+	const bool quoted = SkipPrefix(line, "\""sv);
 
 	// check if path is relative to $HOME
-	bool home_relative = false;
-	if (StringStartsWith(line, home_prefix)) {
-		line += strlen(home_prefix);
-		home_relative = true;
-	}
+	const bool home_relative = SkipPrefix(line, "$HOME"sv);
 
-
-	char *line_end;
 	// find end of the string
+	std::string_view path_view;
 	if (quoted) {
-		line_end = std::strrchr(line, '"');
-		if (line_end == nullptr)
+		const auto [pv, rest] = SplitLast(line, '"');
+		if (rest.data() == nullptr)
 			return true;
+
+		path_view = pv;
 	} else {
-		line_end = StripRight(line, line + strlen(line));
+		path_view = line;
+		path_view = StripRight(path_view);
 	}
 
 	// check for empty result
-	if (line == line_end)
+	if (path_view.empty())
 		return true;
 
-	*line_end = 0;
-
 	// build the result path
-	const auto path_fs = Path::FromFS(line);
+	auto result = AllocatedPath::FromFS(path_view);
 
-	AllocatedPath result = nullptr;
 	if (home_relative) {
 		auto home = GetHomeDir();
 		if (home.IsNull())
 			return true;
-		result = home / path_fs;
-	} else {
-		result = AllocatedPath(path_fs);
+		result = home / result;
 	}
 
-	if (IsValidDir(result.c_str())) {
+	if (IsValidDir(result)) {
 		result_dir = std::move(result);
 		return true;
 	}
@@ -229,14 +274,14 @@ GetUserConfigDir() noexcept
 	return GetStandardDir(CSIDL_LOCAL_APPDATA);
 #elif defined(USE_XDG)
 	// Check for $XDG_CONFIG_HOME
-	if (const auto config_home = getenv("XDG_CONFIG_HOME");
-	    IsValidPathString(config_home) && IsValidDir(config_home))
-		return AllocatedPath::FromFS(config_home);
+	if (const auto path = GetExistingEnvDirectory("XDG_CONFIG_HOME");
+	    path != nullptr)
+		return AllocatedPath{path};
 
 	// Check for $HOME/.config
 	if (const auto home = GetHomeDir(); !home.IsNull()) {
 		auto fallback = home / Path::FromFS(".config");
-		if (IsValidDir(fallback.c_str()))
+		if (IsValidDir(fallback))
 			return fallback;
 	}
 
@@ -250,7 +295,7 @@ AllocatedPath
 GetUserMusicDir() noexcept
 {
 #if defined(_WIN32)
-	return GetStandardDir(CSIDL_MYMUSIC);	
+	return GetStandardDir(CSIDL_MYMUSIC);
 #elif defined(USE_XDG)
 	return GetUserDir("XDG_MUSIC_DIR");
 #elif defined(ANDROID)
@@ -266,15 +311,33 @@ GetUserCacheDir() noexcept
 {
 #ifdef USE_XDG
 	// Check for $XDG_CACHE_HOME
-	if (const auto cache_home = getenv("XDG_CACHE_HOME");
-	    IsValidPathString(cache_home) && IsValidDir(cache_home))
-		return AllocatedPath::FromFS(cache_home);
+	if (const auto path = GetExistingEnvDirectory("XDG_CACHE_HOME");
+	    path != nullptr)
+		return AllocatedPath{path};
 
 	// Check for $HOME/.cache
 	if (const auto home = GetHomeDir(); !home.IsNull())
 		if (auto fallback = home / Path::FromFS(".cache");
-		    IsValidDir(fallback.c_str()))
+		    IsValidDir(fallback))
 			return fallback;
+
+	return nullptr;
+#elif defined(ANDROID)
+	return context->GetCacheDir(Java::GetEnv());
+#else
+	return nullptr;
+#endif
+}
+
+AllocatedPath
+GetAppCacheDir() noexcept
+{
+#ifdef USE_XDG
+	if (const auto user_dir = GetUserCacheDir(); !user_dir.IsNull()) {
+		auto dir = user_dir / app_filename;
+		CreateDirectoryNoThrow(dir);
+		return dir;
+	}
 
 	return nullptr;
 #elif defined(ANDROID)
@@ -288,16 +351,18 @@ AllocatedPath
 GetUserRuntimeDir() noexcept
 {
 #ifdef USE_XDG
-	return SafePathFromFS(getenv("XDG_RUNTIME_DIR"));
-#else
-	return nullptr;
+	if (const auto path = GetExistingEnvDirectory("XDG_RUNTIME_DIR");
+	    path != nullptr)
+		return AllocatedPath{path};
 #endif
+
+	return nullptr;
 }
 
 AllocatedPath
 GetAppRuntimeDir() noexcept
 {
-#ifdef __linux__
+#if defined(__linux__) && !defined(ANDROID)
 	/* systemd specific; see systemd.exec(5) */
 	if (const char *runtime_directory = getenv("RUNTIME_DIRECTORY"))
 		if (auto dir = Split(std::string_view{runtime_directory}, ':').first;
@@ -307,8 +372,8 @@ GetAppRuntimeDir() noexcept
 
 #ifdef USE_XDG
 	if (const auto user_dir = GetUserRuntimeDir(); !user_dir.IsNull()) {
-		auto dir = user_dir / Path::FromFS("mpd");
-		mkdir(dir.c_str(), 0700);
+		auto dir = user_dir / app_filename;
+		CreateDirectoryNoThrow(dir);
 		return dir;
 	}
 #endif
@@ -348,9 +413,8 @@ AllocatedPath
 GetHomeDir() noexcept
 {
 #ifndef ANDROID
-	if (const auto home = getenv("HOME");
-	    IsValidPathString(home) && IsValidDir(home))
-		return AllocatedPath::FromFS(home);
+	if (const auto home = GetExistingEnvDirectory("HOME"); home != nullptr)
+		return AllocatedPath{home};
 
 	if (PasswdEntry pw; pw.ReadByUid(getuid()))
 		return SafePathFromFS(pw->pw_dir);

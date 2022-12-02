@@ -294,6 +294,7 @@ run_input = executable(
     log_dep,
     input_glue_dep,
     archive_glue_dep,
+    cmdline_dep,
   ],
 )
 
@@ -402,6 +403,7 @@ if chromaprint_dep.found()
       input_glue_dep,
       archive_glue_dep,
       chromaprint_dep,
+      cmdline_dep,
     ],
   )
 endif
@@ -420,6 +422,7 @@ executable(
     decoder_glue_dep,
     input_glue_dep,
     archive_glue_dep,
+    cmdline_dep,
   ],
 )
 
@@ -546,6 +549,7 @@ executable(
     log_dep,
     pcm_dep,
     config_dep,
+    cmdline_dep,
   ],
 )
 
@@ -607,6 +611,7 @@ executable(
     output_glue_dep,
     encoder_glue_dep,
     event_dep,
+    cmdline_dep,
   ],
 )
 
@@ -622,7 +627,7 @@ if alsa_dep.found()
     'read_mixer.cxx',
     include_directories: inc,
     dependencies: [
-      mixer_glue_dep,
+      mixer_plugins_dep,
     ],
   )
 endif

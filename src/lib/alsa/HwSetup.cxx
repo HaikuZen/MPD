@@ -21,9 +21,10 @@
 #include "Error.hxx"
 #include "Format.hxx"
 #include "lib/fmt/AudioFormatFormatter.hxx"
+#include "lib/fmt/ToBuffer.hxx"
+#include "lib/fmt/RuntimeError.hxx"
 #include "util/ByteOrder.hxx"
 #include "util/Domain.hxx"
-#include "util/RuntimeError.hxx"
 #include "pcm/AudioFormat.hxx"
 #include "Log.hxx"
 #include "config.h"
@@ -198,16 +199,16 @@ SetupHw(snd_pcm_t *pcm,
 				audio_format.format, params);
 	if (err < 0)
 		throw Alsa::MakeError(err,
-				      fmt::format("Failed to configure format {}",
-						  audio_format.format).c_str());
+				      FmtBuffer<256>("Failed to configure format {}",
+						     audio_format.format));
 
 	unsigned int channels = audio_format.channels;
 	err = snd_pcm_hw_params_set_channels_near(pcm, hwparams,
 						  &channels);
 	if (err < 0)
 		throw Alsa::MakeError(err,
-				      fmt::format("Failed to configure {} channels",
-						  audio_format.channels).c_str());
+				      FmtBuffer<256>("Failed to configure {} channels",
+						     audio_format.channels));
 
 	audio_format.channels = (int8_t)channels;
 
@@ -219,12 +220,12 @@ SetupHw(snd_pcm_t *pcm,
 					      &output_sample_rate, nullptr);
 	if (err < 0)
 		throw Alsa::MakeError(err,
-				      fmt::format("Failed to configure sample rate {} Hz",
-						  requested_sample_rate).c_str());
+				      FmtBuffer<256>("Failed to configure sample rate {} Hz",
+						     requested_sample_rate));
 
 	if (output_sample_rate == 0)
-		throw FormatRuntimeError("Failed to configure sample rate %u Hz",
-					 audio_format.sample_rate);
+		throw FmtRuntimeError("Failed to configure sample rate {} Hz",
+				      audio_format.sample_rate);
 
 	if (output_sample_rate != requested_sample_rate)
 		audio_format.sample_rate = params.CalcInputSampleRate(output_sample_rate);

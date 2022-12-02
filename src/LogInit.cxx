@@ -21,15 +21,16 @@
 #include "LogInit.hxx"
 #include "LogBackend.hxx"
 #include "Log.hxx"
+#include "lib/fmt/PathFormatter.hxx"
+#include "lib/fmt/RuntimeError.hxx"
 #include "config/Param.hxx"
 #include "config/Data.hxx"
 #include "config/Option.hxx"
 #include "fs/AllocatedPath.hxx"
 #include "fs/FileSystem.hxx"
 #include "util/Domain.hxx"
-#include "util/RuntimeError.hxx"
 #include "util/StringAPI.hxx"
-#include "system/Error.hxx"
+#include "lib/fmt/SystemError.hxx"
 
 #include <cassert>
 
@@ -78,14 +79,11 @@ log_init_file(int line)
 	out_fd = open_log_file();
 	if (out_fd < 0) {
 #ifdef _WIN32
-		const std::string out_path_utf8 = out_path.ToUTF8();
-		throw FormatRuntimeError("failed to open log file \"%s\" (config line %d)",
-					 out_path_utf8.c_str(), line);
+		throw FmtRuntimeError("failed to open log file \"{}\" (config line {})",
+				      out_path, line);
 #else
-		int e = errno;
-		const std::string out_path_utf8 = out_path.ToUTF8();
-		throw FormatErrno(e, "failed to open log file \"%s\" (config line %d)",
-				  out_path_utf8.c_str(), line);
+		throw FmtErrno("failed to open log file \"{}\" (config line {})",
+			       out_path, line);
 #endif
 	}
 
@@ -110,7 +108,7 @@ parse_log_level(const char *value)
 	else if (StringIsEqual(value, "error"))
 		return LogLevel::ERROR;
 	else
-		throw FormatRuntimeError("unknown log level \"%s\"", value);
+		throw FmtRuntimeError("unknown log level \"{}\"", value);
 }
 
 #endif
@@ -242,10 +240,9 @@ cycle_log_files() noexcept
 
 	fd = open_log_file();
 	if (fd < 0) {
-		const std::string out_path_utf8 = out_path.ToUTF8();
 		FmtError(log_domain,
 			 "error re-opening log file: {}",
-			 out_path_utf8);
+			 out_path);
 		return -1;
 	}
 

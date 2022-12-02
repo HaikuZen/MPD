@@ -24,8 +24,9 @@
 #include "config/Param.hxx"
 #include "config/Block.hxx"
 #include "fs/AllocatedPath.hxx"
+#include "fs/FileSystem.hxx"
 #include "fs/StandardDirectory.hxx"
-#include "util/RuntimeError.hxx"
+#include "lib/fmt/RuntimeError.hxx"
 
 DatabasePtr
 CreateConfiguredDatabase(const ConfigData &config,
@@ -36,8 +37,8 @@ CreateConfiguredDatabase(const ConfigData &config,
 	const auto *path = config.GetParam(ConfigOption::DB_FILE);
 
 	if (param != nullptr && path != nullptr)
-		throw FormatRuntimeError("Found both 'database' (line %d) and 'db_file' (line %d) setting",
-					 param->line, path->line);
+		throw FmtRuntimeError("Found both 'database' (line {}) and 'db_file' (line }) setting",
+				      param->line, path->line);
 
 	if (param != nullptr) {
 		param->SetUsed();
@@ -51,17 +52,30 @@ CreateConfiguredDatabase(const ConfigData &config,
 	} else {
 		/* if there is no override, use the cache directory */
 
-		const AllocatedPath cache_dir = GetUserCacheDir();
+		const AllocatedPath cache_dir = GetAppCacheDir();
 		if (cache_dir.IsNull())
 			return nullptr;
 
-		const auto db_file = cache_dir / Path::FromFS(PATH_LITERAL("mpd.db"));
+		const auto db_file = cache_dir / Path::FromFS(PATH_LITERAL("db"));
 		auto db_file_utf8 = db_file.ToUTF8();
 		if (db_file_utf8.empty())
 			return nullptr;
 
 		ConfigBlock block;
 		block.AddBlockParam("path", std::move(db_file_utf8), -1);
+
+		{
+			const auto mounts_dir = cache_dir
+				/ Path::FromFS(PATH_LITERAL("mounts"));
+			CreateDirectoryNoThrow(mounts_dir);
+
+			if (auto mounts_dir_utf8 = mounts_dir.ToUTF8();
+			    !mounts_dir_utf8.empty())
+				block.AddBlockParam("cache_directory",
+						    std::move(mounts_dir_utf8),
+						    -1);
+		}
+
 		return DatabaseGlobalInit(main_event_loop, io_event_loop,
 					  listener, block);
 	}

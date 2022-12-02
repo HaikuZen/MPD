@@ -21,12 +21,12 @@
 #include "../AsyncInputStream.hxx"
 #include "event/Call.hxx"
 #include "event/Loop.hxx"
-#include "system/Error.hxx"
+#include "lib/fmt/RuntimeError.hxx"
+#include "lib/fmt/SystemError.hxx"
 #include "io/Open.hxx"
 #include "io/UniqueFileDescriptor.hxx"
 #include "io/uring/ReadOperation.hxx"
 #include "io/uring/Queue.hxx"
-#include "util/RuntimeError.hxx"
 
 #include <sys/stat.h>
 
@@ -188,10 +188,10 @@ OpenUringInputStream(const char *path, Mutex &mutex)
 	// TODO: use IORING_OP_STATX
 	struct stat st;
 	if (fstat(fd.Get(), &st) < 0)
-		throw FormatErrno("Failed to access %s", path);
+		throw FmtErrno("Failed to access {}", path);
 
 	if (!S_ISREG(st.st_mode))
-		throw FormatRuntimeError("Not a regular file: %s", path);
+		throw FmtRuntimeError("Not a regular file: {}", path);
 
 	return std::make_unique<UringInputStream>(*uring_input_event_loop,
 						  *uring_input_queue,

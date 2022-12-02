@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2020 Max Kellermann <max.kellermann@gmail.com>
+ * Copyright 2022 Max Kellermann <max.kellermann@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,40 +27,43 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef RUNTIME_ERROR_HXX
-#define RUNTIME_ERROR_HXX
+#include "SystemError.hxx"
+#include "ToBuffer.hxx"
 
-#include <stdexcept> // IWYU pragma: export
-#include <utility>
+#include <array>
 
-#include <stdio.h>
-
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC diagnostic push
-// TODO: fix this warning properly
-#pragma GCC diagnostic ignored "-Wformat-security"
-#endif
-
-template<typename... Args>
-static inline std::runtime_error
-FormatRuntimeError(const char *fmt, Args&&... args) noexcept
+std::system_error
+VFmtSystemError(std::error_code code,
+		fmt::string_view format_str, fmt::format_args args) noexcept
 {
-	char buffer[1024];
-	snprintf(buffer, sizeof(buffer), fmt, std::forward<Args>(args)...);
-	return std::runtime_error(buffer);
+	const auto msg = VFmtBuffer<512>(format_str, args);
+	return std::system_error{code, msg};
 }
 
-template<typename... Args>
-inline std::invalid_argument
-FormatInvalidArgument(const char *fmt, Args&&... args) noexcept
+#ifdef _WIN32
+
+#include <windef.h> // for HWND (needed by winbase.h)
+#include <winbase.h> // for FormatMessageA()
+
+std::system_error
+VFmtLastError(DWORD code,
+	      fmt::string_view format_str, fmt::format_args args) noexcept
 {
-	char buffer[1024];
-	snprintf(buffer, sizeof(buffer), fmt, std::forward<Args>(args)...);
-	return std::invalid_argument(buffer);
+	std::array<char, 512> buffer;
+	const auto end = buffer.data() + buffer.size();
+
+	constexpr std::size_t max_prefix = sizeof(buffer) - 128;
+	auto [p, _] = fmt::vformat_to_n(buffer.data(),
+					buffer.size() - max_prefix,
+					format_str, args);
+	*p++ = ':';
+	*p++ = ' ';
+
+	FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM |
+		       FORMAT_MESSAGE_IGNORE_INSERTS,
+		       nullptr, code, 0, p, end - p, nullptr);
+
+	return MakeLastError(code, buffer.data());
 }
 
-#if defined(__clang__) || defined(__GNUC__)
-#pragma GCC diagnostic pop
-#endif
-
-#endif
+#endif // _WIN32

@@ -29,6 +29,7 @@
 
 #pragma once
 
+#include "Concepts.hxx"
 #include "IntrusiveList.hxx"
 
 #include <algorithm> // for std::all_of()
@@ -66,9 +67,6 @@ struct IntrusiveHashSetBaseHookTraits {
 	template<typename U>
 	using Hook = typename IntrusiveHashSetHookDetection<U>::type;
 
-	using ListHookTraits =
-		IntrusiveListMemberHookTraits<&T::intrusive_hash_set_siblings>;
-
 	static constexpr T *Cast(Hook<T> *node) noexcept {
 		return static_cast<T *>(node);
 	}
@@ -88,6 +86,14 @@ struct IntrusiveHashSetMemberHookTraits {
 
 	template<typename Dummy>
 	using Hook = _Hook;
+
+	static constexpr T *Cast(Hook<T> *node) noexcept {
+		return &ContainerCast(*node, member);
+	}
+
+	static constexpr auto &ToHook(T &t) noexcept {
+		return t.*member;
+	}
 };
 
 /**
@@ -134,6 +140,7 @@ class IntrusiveHashSet {
 	std::array<Bucket, table_size> table;
 
 	using bucket_iterator = typename Bucket::iterator;
+	using const_bucket_iterator = typename Bucket::const_iterator;
 
 public:
 	using value_type = T;
@@ -155,12 +162,12 @@ public:
 	}
 
 	[[nodiscard]]
-	constexpr const key_equal key_eq() const noexcept {
+	constexpr const key_equal &key_eq() const noexcept {
 		return equal;
 	}
 
 	[[nodiscard]]
-	constexpr bool empty() noexcept {
+	constexpr bool empty() const noexcept {
 		if constexpr (constant_time_size)
 			return size() == 0;
 		else
@@ -170,7 +177,7 @@ public:
 	}
 
 	[[nodiscard]]
-	constexpr size_type size() noexcept {
+	constexpr size_type size() const noexcept {
 		if constexpr (constant_time_size)
 			return counter;
 		else
@@ -186,15 +193,15 @@ public:
 		counter.reset();
 	}
 
-	template<typename D>
-	constexpr void clear_and_dispose(D &&disposer) noexcept {
+	constexpr void clear_and_dispose(Disposer<value_type> auto disposer) noexcept {
 		for (auto &i : table)
 			i.clear_and_dispose(disposer);
 
 		counter.reset();
 	}
 
-	void remove_and_dispose_if(auto &&pred, auto &&disposer) noexcept {
+	void remove_and_dispose_if(Predicate<const_reference> auto pred,
+				   Disposer<value_type> auto disposer) noexcept {
 		static_assert(!constant_time_size, "Not yet implemented");
 
 		for (auto &bucket : table)
@@ -232,7 +239,7 @@ public:
 	}
 
 	constexpr bucket_iterator erase_and_dispose(bucket_iterator i,
-						    auto &&disposer) noexcept {
+						    Disposer<value_type> auto disposer) noexcept {
 		auto result = erase(i);
 		disposer(&*i);
 		return result;
@@ -248,7 +255,38 @@ public:
 		return end();
 	}
 
+	[[nodiscard]] [[gnu::pure]]
+	constexpr const_bucket_iterator find(const auto &key) const noexcept {
+		auto &bucket = GetBucket(key);
+		for (auto &i : bucket)
+			if (equal(key, i))
+				return bucket.iterator_to(i);
+
+		return end();
+	}
+
+	/**
+	 * Like find(), but returns an item that matches the given
+	 * predicate.  This is useful if the container can contain
+	 * multiple items that compare equal (according to #Equal, but
+	 * not according to #pred).
+	 */
+	[[nodiscard]] [[gnu::pure]]
+	constexpr bucket_iterator find_if(const auto &key,
+					  Disposer<value_type> auto pred) noexcept {
+		auto &bucket = GetBucket(key);
+		for (auto &i : bucket)
+			if (equal(key, i) && pred(i))
+				return bucket.iterator_to(i);
+
+		return end();
+	}
+
 	constexpr bucket_iterator end() noexcept {
+		return table.front().end();
+	}
+
+	constexpr const_bucket_iterator end() const noexcept {
 		return table.front().end();
 	}
 
@@ -269,6 +307,14 @@ private:
 	[[gnu::pure]]
 	[[nodiscard]]
 	constexpr auto &GetBucket(K &&key) noexcept {
+		const auto h = hash(std::forward<K>(key));
+		return table[h % table_size];
+	}
+
+	template<typename K>
+	[[gnu::pure]]
+	[[nodiscard]]
+	constexpr const auto &GetBucket(K &&key) const noexcept {
 		const auto h = hash(std::forward<K>(key));
 		return table[h % table_size];
 	}

@@ -18,7 +18,7 @@
  */
 
 #include "CurlInputPlugin.hxx"
-#include "lib/curl/Error.hxx"
+#include "lib/curl/HttpStatusError.hxx"
 #include "lib/curl/Global.hxx"
 #include "lib/curl/Init.hxx"
 #include "lib/curl/Request.hxx"
@@ -499,8 +499,15 @@ CurlInputStream::InitEasy()
 	request->SetVerifyPeer(verify_peer);
 	request->SetVerifyHost(verify_host);
 	request->SetOption(CURLOPT_HTTPHEADER, request_headers.Get());
-	request->SetProxyVerifyPeer(verify_peer);
-	request->SetProxyVerifyHost(verify_host);
+
+	try {
+		request->SetProxyVerifyPeer(verify_peer);
+		request->SetProxyVerifyHost(verify_host);
+	} catch (...) {
+		/* these methods fail if libCURL was compiled with
+		   CURL_DISABLE_PROXY; ignore silently */
+	}
+
 	request->SetConnectTimeout(connect_timeout);
 
 	request->SetOption(CURLOPT_VERBOSE, verbose ? 1 : 0);

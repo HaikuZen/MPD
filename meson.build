@@ -248,15 +248,7 @@ if boost_dep.version() == '1.67'
   warning('Your Boost version 1.67 is known to be buggy, and the MPD build will fail. Please upgrade to Boost 1.68 or later.')
 endif
 
-fmt_dep = dependency('fmt', fallback: ['fmt', 'fmt_dep'])
-
-if compiler.get_id() == 'clang' and compiler.version().version_compare('<15')
-  fmt_dep = declare_dependency(
-    dependencies: fmt_dep,
-    # suppress bogus clang 14 warning (the version in Android NDK r25b)
-    compile_args: ['-Wno-unused-local-typedef'],
-  )
-endif
+subdir('src/lib/fmt')
 
 log = static_library(
   'log',
@@ -400,6 +392,7 @@ if enable_database
 endif
 
 subdir('src/util')
+subdir('src/cmdline')
 subdir('src/time')
 subdir('src/io')
 subdir('src/io/uring')
@@ -410,6 +403,8 @@ subdir('src/event')
 subdir('src/win32')
 
 subdir('src/apple')
+
+subdir('src/pcm')
 
 subdir('src/lib/dbus')
 subdir('src/lib/icu')
@@ -440,7 +435,6 @@ subdir('src/zeroconf')
 subdir('src/fs')
 subdir('src/config')
 subdir('src/tag')
-subdir('src/pcm')
 subdir('src/neighbor')
 subdir('src/input')
 subdir('src/archive')
@@ -536,6 +530,7 @@ mpd = build_target(
   target_type: target_type,
   include_directories: inc,
   dependencies: [
+    cmdline_dep,
     basic_dep,
     config_dep,
     dbus_dep,
