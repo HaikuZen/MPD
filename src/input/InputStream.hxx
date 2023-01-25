@@ -94,10 +94,11 @@ private:
 	std::string mime;
 
 public:
-	InputStream(const char *_uri, Mutex &_mutex) noexcept
-		:uri(_uri),
-		 mutex(_mutex) {
-		assert(_uri != nullptr);
+	template<typename U>
+	InputStream(U &&_uri, Mutex &_mutex) noexcept
+		:uri(std::forward<U>(_uri)),
+		 mutex(_mutex)
+	{
 	}
 
 	/**
@@ -156,6 +157,10 @@ public:
 	 */
 	const char *GetURI() const noexcept {
 		return uri.c_str();
+	}
+
+	std::string_view GetUriView() const noexcept {
+		return uri;
 	}
 
 	/**

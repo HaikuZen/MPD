@@ -20,14 +20,12 @@
 #ifndef MPD_WIN32_HRESULT_HXX
 #define MPD_WIN32_HRESULT_HXX
 
-#include "util/Compiler.h"
-
 #include <string_view>
 #include <system_error>
 
 #include <windef.h>
 
-gcc_const
+[[gnu::const]]
 std::string_view
 HRESULTToString(HRESULT result) noexcept;
 
@@ -51,8 +49,5 @@ MakeHResultError(HRESULT result, const char *msg) noexcept
 	return std::system_error(std::error_code(result, hresult_category()),
 				 msg);
 }
-
-gcc_printf(2, 3) std::system_error
-FormatHResultError(HRESULT result, const char *fmt, ...) noexcept;
 
 #endif
