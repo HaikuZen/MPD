@@ -1,4 +1,5 @@
-import os.path, subprocess, sys
+import os
+import subprocess
 import platform
 
 from build.project import Project
@@ -70,6 +71,12 @@ cpp_args = {repr((toolchain.cppflags + ' ' + toolchain.cxxflags).split())}
 cpp_link_args = {repr(toolchain.ldflags.split() + toolchain.libs.split())}
 """)
 
+        if 'android' in toolchain.actual_arch:
+            f.write("""
+# Keep Meson from executing Android-x86 test binaries
+needs_exe_wrapper = true
+""")
+
         f.write(f"""
 [host_machine]
 system = '{system}'
@@ -112,5 +119,5 @@ class MesonProject(Project):
 
     def _build(self, toolchain):
         build = self.configure(toolchain)
-        subprocess.check_call(['ninja', 'install'],
+        subprocess.check_call(['ninja', '-v', 'install'],
                               cwd=build, env=toolchain.env)

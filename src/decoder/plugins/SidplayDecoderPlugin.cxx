@@ -1,21 +1,5 @@
-/*
- * Copyright 2003-2022 The Music Player Daemon Project
- * http://www.musicpd.org
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Copyright The Music Player Daemon Project
 
 #include "SidplayDecoderPlugin.hxx"
 #include "decoder/Features.h"
@@ -31,7 +15,6 @@
 #ifdef HAVE_SIDPLAYFP
 #include "io/FileReader.hxx"
 #endif
-#include "util/StringFormat.hxx"
 #include "util/Domain.hxx"
 #include "util/AllocatedString.hxx"
 #include "util/CharUtil.hxx"
@@ -53,6 +36,8 @@
 #include <sidplay/utils/SidTuneMod.h>
 #include <sidplay/utils/SidDatabase.h>
 #endif
+
+#include <fmt/format.h>
 
 #include <iterator>
 #include <memory>
@@ -165,7 +150,7 @@ struct SidplayContainerPath {
 	unsigned track;
 };
 
-gcc_pure
+[[gnu::pure]]
 static unsigned
 ParseSubtuneName(const char *base) noexcept
 {
@@ -474,7 +459,7 @@ Windows1252ToUTF8(const char *s) noexcept
 	return t;
 }
 
-gcc_pure
+[[gnu::pure]]
 static AllocatedString
 GetInfoString(const SidTuneInfo &info, unsigned i) noexcept
 {
@@ -491,7 +476,7 @@ GetInfoString(const SidTuneInfo &info, unsigned i) noexcept
 	return Windows1252ToUTF8(s);
 }
 
-gcc_pure
+[[gnu::pure]]
 static AllocatedString
 GetDateString(const SidTuneInfo &info) noexcept
 {
@@ -526,8 +511,8 @@ ScanSidTuneInfo(const SidTuneInfo &info, unsigned track, unsigned n_tracks,
 
 	if (n_tracks > 1) {
 		const auto tag_title =
-			StringFormat<1024>("%s (%u/%u)",
-					   album.c_str(), track, n_tracks);
+			fmt::format("{} ({}/{})",
+				    album.c_str(), track, n_tracks);
 		handler.OnTag(TAG_TITLE, tag_title.c_str());
 	} else
 		handler.OnTag(TAG_TITLE, album.c_str());
@@ -548,7 +533,7 @@ ScanSidTuneInfo(const SidTuneInfo &info, unsigned track, unsigned n_tracks,
 		handler.OnTag(TAG_DATE, date.c_str());
 
 	/* track */
-	handler.OnTag(TAG_TRACK, StringFormat<16>("%u", track).c_str());
+	handler.OnTag(TAG_TRACK, fmt::format_int{track}.c_str());
 }
 
 static bool
@@ -627,7 +612,7 @@ sidplay_container_scan(Path path_fs)
 		/* Construct container/tune path names, eg.
 		   Delta.sid/tune_001.sid */
 		tail = list.emplace_after(tail,
-					  StringFormat<32>(SUBTUNE_PREFIX "%03u.sid", i),
+					  fmt::format(SUBTUNE_PREFIX "{:03}.sid", i),
 					  tag_builder.Commit());
 	}
 

@@ -1,21 +1,5 @@
-/*
- * Copyright 2003-2022 The Music Player Daemon Project
- * http://www.musicpd.org
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Copyright The Music Player Daemon Project
 
 /* \file
  *
@@ -181,15 +165,15 @@ dsf_read_metadata(DecoderClient *client, InputStream &is,
 }
 
 static void
-bit_reverse_buffer(uint8_t *p, uint8_t *end)
+bit_reverse_buffer(std::byte *p, std::byte *end)
 {
 	for (; p < end; ++p)
-		*p = bit_reverse(*p);
+		*p = BitReverse(*p);
 }
 
 static void
-InterleaveDsfBlockMono(uint8_t *gcc_restrict dest,
-		       const uint8_t *gcc_restrict src)
+InterleaveDsfBlockMono(std::byte *gcc_restrict dest,
+		       const std::byte *gcc_restrict src)
 {
 	memcpy(dest, src, DSF_BLOCK_SIZE);
 }
@@ -201,8 +185,8 @@ InterleaveDsfBlockMono(uint8_t *gcc_restrict dest,
  * order.
  */
 static void
-InterleaveDsfBlockStereo(uint8_t *gcc_restrict dest,
-			 const uint8_t *gcc_restrict src)
+InterleaveDsfBlockStereo(std::byte *gcc_restrict dest,
+			 const std::byte *gcc_restrict src)
 {
 	for (size_t i = 0; i < DSF_BLOCK_SIZE; ++i) {
 		dest[2 * i] = src[i];
@@ -211,8 +195,8 @@ InterleaveDsfBlockStereo(uint8_t *gcc_restrict dest,
 }
 
 static void
-InterleaveDsfBlockChannel(uint8_t *gcc_restrict dest,
-			  const uint8_t *gcc_restrict src,
+InterleaveDsfBlockChannel(std::byte *gcc_restrict dest,
+			  const std::byte *gcc_restrict src,
 			  unsigned channels)
 {
 	for (size_t i = 0; i < DSF_BLOCK_SIZE; ++i, dest += channels, ++src)
@@ -220,8 +204,8 @@ InterleaveDsfBlockChannel(uint8_t *gcc_restrict dest,
 }
 
 static void
-InterleaveDsfBlockGeneric(uint8_t *gcc_restrict dest,
-			  const uint8_t *gcc_restrict src,
+InterleaveDsfBlockGeneric(std::byte *gcc_restrict dest,
+			  const std::byte *gcc_restrict src,
 			  unsigned channels)
 {
 	for (unsigned c = 0; c < channels; ++c, ++dest, src += DSF_BLOCK_SIZE)
@@ -229,7 +213,7 @@ InterleaveDsfBlockGeneric(uint8_t *gcc_restrict dest,
 }
 
 static void
-InterleaveDsfBlock(uint8_t *gcc_restrict dest, const uint8_t *gcc_restrict src,
+InterleaveDsfBlock(std::byte *gcc_restrict dest, const std::byte *gcc_restrict src,
 		   unsigned channels)
 {
 	if (channels == 1)
@@ -279,14 +263,14 @@ dsf_decode_chunk(DecoderClient &client, InputStream &is,
 		}
 
 		/* worst-case buffer size */
-		uint8_t buffer[MAX_CHANNELS * DSF_BLOCK_SIZE];
+		std::byte buffer[MAX_CHANNELS * DSF_BLOCK_SIZE];
 		if (!decoder_read_full(&client, is, buffer, block_size))
 			return false;
 
 		if (bitreverse)
 			bit_reverse_buffer(buffer, buffer + block_size);
 
-		uint8_t interleaved_buffer[MAX_CHANNELS * DSF_BLOCK_SIZE];
+		std::byte interleaved_buffer[MAX_CHANNELS * DSF_BLOCK_SIZE];
 		InterleaveDsfBlock(interleaved_buffer, buffer, channels);
 
 		cmd = client.SubmitAudio(is,

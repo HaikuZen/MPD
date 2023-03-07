@@ -1,21 +1,5 @@
-/*
- * Copyright 2003-2022 The Music Player Daemon Project
- * http://www.musicpd.org
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Copyright The Music Player Daemon Project
 
 #include "ShoutOutputPlugin.hxx"
 #include "../OutputAPI.hxx"
@@ -25,16 +9,15 @@
 #include "util/Domain.hxx"
 #include "util/ScopeExit.hxx"
 #include "util/StringAPI.hxx"
-#include "util/StringFormat.hxx"
 #include "Log.hxx"
 
 #include <shout/shout.h>
 
+#include <fmt/format.h>
+
 #include <cassert>
 #include <memory>
 #include <stdexcept>
-
-#include <stdio.h>
 
 class ShoutConfig {
 	const char *const host;
@@ -115,10 +98,10 @@ static void
 ShoutSetAudioInfo(shout_t *shout_conn, const AudioFormat &audio_format)
 {
 	shout_set_audio_info(shout_conn, SHOUT_AI_CHANNELS,
-			     StringFormat<11>("%u", audio_format.channels));
+			     fmt::format_int{static_cast<unsigned>(audio_format.channels)}.c_str());
 
 	shout_set_audio_info(shout_conn, SHOUT_AI_SAMPLERATE,
-			     StringFormat<11>("%u", audio_format.sample_rate));
+			     fmt::format_int{audio_format.sample_rate}.c_str());
 }
 
 #ifdef SHOUT_TLS
@@ -432,15 +415,15 @@ ShoutOutput::Pause()
 	return true;
 }
 
-static void
-shout_tag_to_metadata(const Tag &tag, char *dest, size_t size) noexcept
+static std::string
+shout_tag_to_metadata(const Tag &tag) noexcept
 {
 	const char *artist = tag.GetValue(TAG_ARTIST);
 	const char *title = tag.GetValue(TAG_TITLE);
 
-	snprintf(dest, size, "%s - %s",
-		 artist != nullptr ? artist : "",
-		 title != nullptr ? title : "");
+	return fmt::format("{} - {}",
+			   artist != nullptr ? artist : "",
+			   title != nullptr ? title : "");
 }
 
 void
@@ -458,10 +441,9 @@ ShoutOutput::SendTag(const Tag &tag)
 		const auto meta = shout_metadata_new();
 		AtScopeExit(meta) { shout_metadata_free(meta); };
 
-		char song[1024];
-		shout_tag_to_metadata(tag, song, sizeof(song));
+		const auto song = shout_tag_to_metadata(tag);
 
-		if (SHOUTERR_SUCCESS != shout_metadata_add(meta, "song", song) ||
+		if (SHOUTERR_SUCCESS != shout_metadata_add(meta, "song", song.c_str()) ||
 #ifdef SHOUT_FORMAT_TEXT
 		    /* since libshout 2.4.6 */
 		    SHOUTERR_SUCCESS != shout_set_metadata_utf8(shout_conn, meta)

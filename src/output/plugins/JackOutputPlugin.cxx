@@ -1,21 +1,5 @@
-/*
- * Copyright 2003-2022 The Music Player Daemon Project
- * http://www.musicpd.org
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Copyright The Music Player Daemon Project
 
 #include "config.h"
 #include "JackOutputPlugin.hxx"
@@ -44,10 +28,6 @@
 static constexpr unsigned MAX_PORTS = 16;
 
 static constexpr size_t jack_sample_size = sizeof(jack_default_audio_sample_t);
-
-#ifdef DYNAMIC_JACK
-#include "lib/jack/Dynamic.hxx"
-#endif // _WIN32
 
 class JackOutput final : public AudioOutput {
 	/**
@@ -144,7 +124,7 @@ private:
 	 * Determine the number of frames guaranteed to be available
 	 * on all channels.
 	 */
-	gcc_pure
+	[[gnu::pure]]
 	jack_nframes_t GetAvailable() const noexcept;
 
 	void Process(jack_nframes_t nframes);
@@ -468,10 +448,6 @@ JackOutput::Disable() noexcept
 static AudioOutput *
 mpd_jack_init(EventLoop &, const ConfigBlock &block)
 {
-#ifdef DYNAMIC_JACK
-	LoadJackLibrary();
-#endif
-
 	jack_set_error_function(mpd_jack_error);
 
 #ifdef HAVE_JACK_SET_INFO_FUNCTION

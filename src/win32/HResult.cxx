@@ -1,21 +1,5 @@
-/*
- * Copyright 2020-2022 The Music Player Daemon Project
- * http://www.musicpd.org
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Copyright The Music Player Daemon Project
 
 #ifdef _WIN32
 // COM needs the "MSG" typedef, and audiopolicy.h includes COM headers
@@ -24,8 +8,9 @@
 
 #include "HResult.hxx"
 
+#include <fmt/core.h>
+
 #include <cassert>
-#include <cstdio>
 
 #include <combaseapi.h> // needed by audiopolicy.h if COM_NO_WINDOWS_H is defined
 #include <audiopolicy.h>
@@ -85,7 +70,5 @@ HResultCategory::message(int Errcode) const
 	if (!msg.empty())
 		return std::string(msg);
 
-	int size = snprintf(buffer, sizeof(buffer), "0x%1x", Errcode);
-	assert(2 <= size && size <= 10);
-	return std::string(buffer, size);
+	return fmt::format("{:#x}", Errcode);
 }

@@ -1,28 +1,11 @@
-/*
- * Copyright 2003-2022 The Music Player Daemon Project
- * http://www.musicpd.org
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Copyright The Music Player Daemon Project
 
 #ifndef MPD_PLAYLIST_PLUGIN_HXX
 #define MPD_PLAYLIST_PLUGIN_HXX
 
 #include "input/Ptr.hxx"
 #include "thread/Mutex.hxx"
-#include "util/Compiler.h"
 
 #include <string_view>
 
@@ -120,19 +103,19 @@ struct PlaylistPlugin {
 	/**
 	 * Does the plugin announce the specified URI scheme?
 	 */
-	gcc_pure gcc_nonnull_all
+	[[gnu::pure]]
 	bool SupportsScheme(std::string_view scheme) const noexcept;
 
 	/**
 	 * Does the plugin announce the specified file name suffix?
 	 */
-	gcc_pure gcc_nonnull_all
+	[[gnu::pure]]
 	bool SupportsSuffix(std::string_view suffix) const noexcept;
 
 	/**
 	 * Does the plugin announce the specified MIME type?
 	 */
-	gcc_pure gcc_nonnull_all
+	[[gnu::pure]]
 	bool SupportsMimeType(std::string_view mime_type) const noexcept;
 };
 

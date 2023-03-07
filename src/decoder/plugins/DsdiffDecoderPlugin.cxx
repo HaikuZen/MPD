@@ -1,21 +1,5 @@
-/*
- * Copyright 2003-2022 The Music Player Daemon Project
- * http://www.musicpd.org
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Copyright The Music Player Daemon Project
 
 /* \file
  *
@@ -351,10 +335,10 @@ dsdiff_read_metadata(DecoderClient *client, InputStream &is,
 }
 
 static void
-bit_reverse_buffer(uint8_t *p, uint8_t *end)
+bit_reverse_buffer(std::byte *p, std::byte *end)
 {
 	for (; p < end; ++p)
-		*p = bit_reverse(*p);
+		*p = BitReverse(*p);
 }
 
 static offset_type
@@ -374,7 +358,7 @@ dsdiff_decode_chunk(DecoderClient &client, InputStream &is,
 	const unsigned kbit_rate = channels * sample_rate / 1000;
 	const offset_type start_offset = is.GetOffset();
 
-	uint8_t buffer[8192];
+	std::byte buffer[8192];
 
 	const size_t sample_size = sizeof(buffer[0]);
 	const size_t frame_size = channels * sample_size;

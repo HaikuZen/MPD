@@ -1,21 +1,5 @@
-/*
- * Copyright 2003-2022 The Music Player Daemon Project
- * http://www.musicpd.org
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Copyright The Music Player Daemon Project
 
 #include "CurlInputPlugin.hxx"
 #include "lib/curl/HttpStatusError.hxx"
@@ -32,10 +16,10 @@
 #include "config/Block.hxx"
 #include "tag/Builder.hxx"
 #include "tag/Tag.hxx"
+#include "lib/fmt/ToBuffer.hxx"
 #include "event/Call.hxx"
 #include "event/Loop.hxx"
 #include "util/ASCII.hxx"
-#include "util/StringFormat.hxx"
 #include "util/NumberParser.hxx"
 #include "util/Domain.hxx"
 #include "Log.hxx"
@@ -48,6 +32,8 @@
 #include "util/UriExtract.hxx"
 #include "util/UriQueryParser.hxx"
 #endif
+
+#include <fmt/format.h>
 
 #include <cassert>
 #include <cinttypes>
@@ -277,8 +263,8 @@ CurlInputStream::OnHeaders(unsigned status,
 
 	if (status < 200 || status >= 300)
 		throw HttpStatusError(status,
-				      StringFormat<40>("got HTTP status %u",
-						       status).c_str());
+				      FmtBuffer<40>("got HTTP status {}",
+						    status).c_str());
 
 	const std::scoped_lock<Mutex> protect(mutex);
 
@@ -491,8 +477,8 @@ CurlInputStream::InitEasy()
 
 	if (proxy_user != nullptr && proxy_password != nullptr)
 		request->SetOption(CURLOPT_PROXYUSERPWD,
-				   StringFormat<1024>("%s:%s", proxy_user,
-						      proxy_password).c_str());
+				   FmtBuffer<1024>("{}:{}", proxy_user,
+						   proxy_password).c_str());
 
 	if (cacert != nullptr)
 		request->SetOption(CURLOPT_CAINFO, cacert);
@@ -548,8 +534,7 @@ CurlInputStream::SeekInternal(offset_type new_offset)
 
 	if (offset > 0)
 		request->SetOption(CURLOPT_RANGE,
-				   StringFormat<40>("%" PRIoffset "-",
-						    offset).c_str());
+				   fmt::format_int{offset}.c_str());
 
 	StartRequest();
 }

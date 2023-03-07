@@ -1,21 +1,5 @@
-/*
- * Copyright 2003-2022 The Music Player Daemon Project
- * http://www.musicpd.org
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Copyright The Music Player Daemon Project
 
 #include "OpusDecoderPlugin.h"
 #include "OggDecoder.hxx"
@@ -49,15 +33,15 @@ constexpr opus_int32 opus_sample_rate = 48000;
  */
 constexpr unsigned opus_output_buffer_frames = opus_sample_rate / 4;
 
-gcc_pure
-bool
+[[gnu::pure]]
+static bool
 IsOpusHead(const ogg_packet &packet) noexcept
 {
 	return packet.bytes >= 8 && memcmp(packet.packet, "OpusHead", 8) == 0;
 }
 
-gcc_pure
-bool
+[[gnu::pure]]
+static bool
 IsOpusTags(const ogg_packet &packet) noexcept
 {
 	return packet.bytes >= 8 && memcmp(packet.packet, "OpusTags", 8) == 0;
@@ -66,7 +50,7 @@ IsOpusTags(const ogg_packet &packet) noexcept
 /**
  * Convert an EBU R128 value to ReplayGain.
  */
-constexpr float
+static constexpr float
 EbuR128ToReplayGain(float ebu_r128) noexcept
 {
 	/* add 5dB to compensate for the different reference levels
@@ -74,7 +58,7 @@ EbuR128ToReplayGain(float ebu_r128) noexcept
 	return ebu_r128 + 5;
 }
 
-bool
+static bool
 mpd_opus_init([[maybe_unused]] const ConfigBlock &block)
 {
 	LogDebug(opus_domain, opus_get_version_string());
@@ -316,7 +300,7 @@ MPDOpusDecoder::HandleAudio(const ogg_packet &packet)
 				  packet.bytes,
 				  output_buffer, opus_output_buffer_frames,
 				  0);
-	if (gcc_unlikely(nframes <= 0)) {
+	if (nframes <= 0) [[unlikely]] {
 		if (nframes < 0)
 			throw FmtRuntimeError("libopus error: {}",
 					      opus_strerror(nframes));

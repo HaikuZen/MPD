@@ -1,21 +1,5 @@
-/*
- * Copyright 2003-2022 The Music Player Daemon Project
- * http://www.musicpd.org
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Copyright The Music Player Daemon Project
 
 #include "PipeWireOutputPlugin.hxx"
 #include "lib/pipewire/Error.hxx"
@@ -30,6 +14,7 @@
 #include "util/Domain.hxx"
 #include "util/RingBuffer.hxx"
 #include "util/ScopeExit.hxx"
+#include "util/StaticVector.hxx"
 #include "util/StringCompare.hxx"
 #include "Log.hxx"
 #include "tag/Format.hxx"
@@ -724,16 +709,10 @@ Interleave(std::byte *data, std::byte *end,
 }
 
 static void
-BitReverse(uint8_t *data, std::size_t n) noexcept
-{
-	while (n-- > 0)
-		*data = bit_reverse(*data);
-}
-
-static void
 BitReverse(std::byte *data, std::size_t n) noexcept
 {
-	BitReverse((uint8_t *)data, n);
+	while (n-- > 0)
+		*data = BitReverse(*data);
 }
 
 static void
@@ -939,28 +918,30 @@ PipeWireOutput::SendTag(const Tag &tag)
 {
 	CheckThrowError();
 
-	struct spa_dict_item items[3];
-	uint32_t n_items=0;
+	static constexpr struct {
+		TagType mpd;
+		const char *pipewire;
+	} tag_map[] = {
+		{ TAG_ARTIST, PW_KEY_MEDIA_ARTIST },
+		{ TAG_TITLE, PW_KEY_MEDIA_TITLE },
+		{ TAG_DATE, PW_KEY_MEDIA_DATE },
+		{ TAG_COMMENT, PW_KEY_MEDIA_COMMENT },
+	};
 
-	const char *artist, *title;
+	StaticVector<spa_dict_item, 1 + std::size(tag_map)> items;
 
 	char *medianame = FormatTag(tag, "%artist% - %title%");
 	AtScopeExit(medianame) { free(medianame); };
 
-	items[n_items++] = SPA_DICT_ITEM_INIT(PW_KEY_MEDIA_NAME, medianame);
+	items.push_back(SPA_DICT_ITEM_INIT(PW_KEY_MEDIA_NAME, medianame));
 
-	artist = tag.GetValue(TAG_ARTIST);
-	title = tag.GetValue(TAG_TITLE);
+	for (const auto &i : tag_map)
+		if (const char *value = tag.GetValue(i.mpd))
+			items.push_back(SPA_DICT_ITEM_INIT(i.pipewire, value));
 
-	if (artist != nullptr) {
-		items[n_items++] = SPA_DICT_ITEM_INIT(PW_KEY_MEDIA_ARTIST, artist);
-	}
+	struct spa_dict dict = SPA_DICT_INIT(items.data(), (uint32_t)items.size());
 
-	if (title != nullptr) {
-		items[n_items++] = SPA_DICT_ITEM_INIT(PW_KEY_MEDIA_TITLE, title);
-	}
-
-	struct spa_dict dict = SPA_DICT_INIT(items, n_items);
+	const PipeWire::ThreadLoopLock lock(thread_loop);
 
 	auto rc = pw_stream_update_properties(stream, &dict);
 	if (rc < 0)

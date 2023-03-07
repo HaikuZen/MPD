@@ -1,21 +1,5 @@
-/*
- * Copyright 2003-2022 The Music Player Daemon Project
- * http://www.musicpd.org
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Copyright The Music Player Daemon Project
 
 #include "CurlStorage.hxx"
 #include "storage/StoragePlugin.hxx"
@@ -31,6 +15,7 @@
 #include "lib/curl/Escape.hxx"
 #include "lib/expat/ExpatParser.hxx"
 #include "lib/fmt/RuntimeError.hxx"
+#include "lib/fmt/ToBuffer.hxx"
 #include "fs/Traits.hxx"
 #include "event/InjectEvent.hxx"
 #include "thread/Mutex.hxx"
@@ -38,7 +23,6 @@
 #include "util/ASCII.hxx"
 #include "util/SpanCast.hxx"
 #include "util/StringCompare.hxx"
-#include "util/StringFormat.hxx"
 #include "util/StringSplit.hxx"
 #include "util/UriExtract.hxx"
 
@@ -219,7 +203,7 @@ ParseU64(const char *s, size_t length) noexcept
 	return ParseU64(std::string(s, length).c_str());
 }
 
-gcc_pure
+[[gnu::pure]]
 static bool
 IsXmlContentType(const char *content_type) noexcept
 {
@@ -227,7 +211,7 @@ IsXmlContentType(const char *content_type) noexcept
 		StringStartsWith(content_type, "application/xml");
 }
 
-gcc_pure
+[[gnu::pure]]
 static bool
 IsXmlContentType(const Curl::Headers &headers) noexcept
 {
@@ -268,7 +252,7 @@ public:
 		   username/password are specified */
 		request.SetOption(CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
 
-		request_headers.Append(StringFormat<40>("depth: %u", depth));
+		request_headers.Append(FmtBuffer<40>("depth: {}", depth));
 		request_headers.Append("content-type: text/xml");
 
 		request.SetOption(CURLOPT_HTTPHEADER, request_headers.Get());
@@ -472,7 +456,7 @@ CurlStorage::GetInfo(std::string_view uri_utf8, [[maybe_unused]] bool follow)
 	return HttpGetInfoOperation(*curl, uri.c_str()).Perform();
 }
 
-gcc_pure
+[[gnu::pure]]
 static std::string_view
 UriPathOrSlash(const char *uri) noexcept
 {
@@ -510,7 +494,7 @@ private:
 	 * Convert a "href" attribute (which may be an absolute URI)
 	 * to the base file name.
 	 */
-	gcc_pure
+	[[gnu::pure]]
 	std::string_view HrefToEscapedName(const char *href) const noexcept {
 		std::string_view path = uri_get_path(href);
 		if (path.data() == nullptr)

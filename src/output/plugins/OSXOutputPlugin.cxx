@@ -1,21 +1,5 @@
-/*
- * Copyright 2003-2022 The Music Player Daemon Project
- * http://www.musicpd.org
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Copyright The Music Player Daemon Project
 
 #include "config.h"
 #include "OSXOutputPlugin.hxx"
@@ -26,6 +10,7 @@
 #include "../OutputAPI.hxx"
 #include "mixer/plugins/OSXMixerPlugin.hxx"
 #include "lib/fmt/RuntimeError.hxx"
+#include "lib/fmt/ToBuffer.hxx"
 #include "util/Domain.hxx"
 #include "util/Manual.hxx"
 #include "pcm/Export.hxx"
@@ -36,7 +21,6 @@
 #include "util/RingBuffer.hxx"
 #include "util/StringAPI.hxx"
 #include "util/StringBuffer.hxx"
-#include "util/StringFormat.hxx"
 #include "Log.hxx"
 
 #include <CoreAudio/CoreAudio.h>
@@ -58,20 +42,20 @@
 
 static constexpr unsigned MPD_OSX_BUFFER_TIME_MS = 100;
 
-static StringBuffer<64>
-StreamDescriptionToString(const AudioStreamBasicDescription desc)
+static auto
+StreamDescriptionToString(const AudioStreamBasicDescription desc) noexcept
 {
 	// Only convert the lpcm formats (nothing else supported / used by MPD)
 	assert(desc.mFormatID == kAudioFormatLinearPCM);
 
-	return StringFormat<64>("%u channel %s %sinterleaved %u-bit %s %s (%uHz)",
-				desc.mChannelsPerFrame,
-				(desc.mFormatFlags & kAudioFormatFlagIsNonMixable) ? "" : "mixable",
-				(desc.mFormatFlags & kAudioFormatFlagIsNonInterleaved) ? "non-" : "",
-				desc.mBitsPerChannel,
-				(desc.mFormatFlags & kAudioFormatFlagIsFloat) ? "Float" : "SInt",
-				(desc.mFormatFlags & kAudioFormatFlagIsBigEndian) ? "BE" : "LE",
-				(UInt32)desc.mSampleRate);
+	return FmtBuffer<256>("{} channel {} {}interleaved {}-bit {} {} ({}Hz)",
+			      desc.mChannelsPerFrame,
+			      (desc.mFormatFlags & kAudioFormatFlagIsNonMixable) ? "" : "mixable",
+			      (desc.mFormatFlags & kAudioFormatFlagIsNonInterleaved) ? "non-" : "",
+			      desc.mBitsPerChannel,
+			      (desc.mFormatFlags & kAudioFormatFlagIsFloat) ? "Float" : "SInt",
+			      (desc.mFormatFlags & kAudioFormatFlagIsBigEndian) ? "BE" : "LE",
+			      desc.mSampleRate);
 }
 
 
@@ -541,7 +525,7 @@ osx_output_hog_device(AudioDeviceID dev_id, bool hog) noexcept
 	}
 }
 
-gcc_pure
+[[gnu::pure]]
 static bool
 IsAudioDeviceName(AudioDeviceID id, const char *expected_name) noexcept
 {

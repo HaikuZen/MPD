@@ -1,21 +1,5 @@
-/*
- * Copyright 2003-2022 The Music Player Daemon Project
- * http://www.musicpd.org
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Copyright The Music Player Daemon Project
 
 #include "GmeDecoderPlugin.hxx"
 #include "../DecoderAPI.hxx"
@@ -28,13 +12,15 @@
 #include "fs/AllocatedPath.hxx"
 #include "fs/FileSystem.hxx"
 #include "fs/NarrowPath.hxx"
+#include "lib/fmt/PathFormatter.hxx"
 #include "util/ScopeExit.hxx"
 #include "util/StringCompare.hxx"
-#include "util/StringFormat.hxx"
 #include "util/Domain.hxx"
 #include "Log.hxx"
 
 #include <gme/gme.h>
+
+#include <fmt/format.h>
 
 #include <cassert>
 
@@ -77,7 +63,7 @@ gme_plugin_init([[maybe_unused]] const ConfigBlock &block)
 	return true;
 }
 
-gcc_pure
+[[gnu::pure]]
 static unsigned
 ParseSubtuneName(const char *base) noexcept
 {
@@ -244,16 +230,16 @@ ScanGmeInfo(const gme_info_t &info, unsigned song_num, int track_count,
 			));
 
 	if (track_count > 1)
-		handler.OnTag(TAG_TRACK, StringFormat<16>("%u", song_num + 1).c_str());
+		handler.OnTag(TAG_TRACK, fmt::format_int{song_num + 1}.c_str());
 
 	if (!StringIsEmpty(info.song)) {
 		if (track_count > 1) {
 			/* start numbering subtunes from 1 */
 			const auto tag_title =
-				StringFormat<1024>("%s (%u/%d)",
-						   info.song, song_num + 1,
-						   track_count);
-			handler.OnTag(TAG_TITLE, tag_title.c_str());
+				fmt::format("{} ({}/{})",
+					    info.song, song_num + 1,
+					    track_count);
+			handler.OnTag(TAG_TITLE, tag_title);
 		} else
 			handler.OnTag(TAG_TITLE, info.song);
 	}
@@ -322,7 +308,7 @@ gme_container_scan(Path path_fs)
 	if (num_songs < 2)
 		return list;
 
-	const auto *subtune_suffix = path_fs.GetExtension();
+	const Path subtune_suffix = Path::FromFS(path_fs.GetExtension());
 
 	TagBuilder tag_builder;
 
@@ -331,10 +317,9 @@ gme_container_scan(Path path_fs)
 		AddTagHandler h(tag_builder);
 		ScanMusicEmu(emu, i, h);
 
-		const auto track_name =
-			StringFormat<64>(SUBTUNE_PREFIX "%03u.%s", i+1,
-					 subtune_suffix);
-		tail = list.emplace_after(tail, track_name,
+		auto track_name = fmt::format(SUBTUNE_PREFIX "{:03}.{}",
+					      i + 1, subtune_suffix);
+		tail = list.emplace_after(tail, std::move(track_name),
 					  tag_builder.Commit());
 	}
 

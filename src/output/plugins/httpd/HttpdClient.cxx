@@ -1,21 +1,5 @@
-/*
- * Copyright 2003-2022 The Music Player Daemon Project
- * http://www.musicpd.org
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Copyright The Music Player Daemon Project
 
 #include "HttpdClient.hxx"
 #include "HttpdInternal.hxx"
@@ -27,10 +11,10 @@
 #include "net/UniqueSocketDescriptor.hxx"
 #include "Log.hxx"
 
+#include <fmt/core.h>
+
 #include <cassert>
 #include <cstring>
-
-#include <stdio.h>
 
 HttpdClient::~HttpdClient() noexcept
 {
@@ -135,8 +119,7 @@ HttpdClient::HandleLine(const char *line) noexcept
 bool
 HttpdClient::SendResponse() noexcept
 {
-	char buffer[1024];
-	AllocatedString allocated;
+	std::string allocated;
 	const char *response;
 
 	assert(state == State::RESPONSE);
@@ -156,20 +139,19 @@ HttpdClient::SendResponse() noexcept
 						   metaint);
 		response = allocated.c_str();
 	} else { /* revert to a normal HTTP request */
-		snprintf(buffer, sizeof(buffer),
-			 "HTTP/1.1 200 OK\r\n"
-			 "Content-Type: %s\r\n"
-			 "Connection: close\r\n"
-			 "Pragma: no-cache\r\n"
-			 "Cache-Control: no-cache, no-store\r\n"
-			 "Access-Control-Allow-Origin: *\r\n"
-			 "\r\n",
-			 httpd.content_type);
-		response = buffer;
+		allocated = fmt::format("HTTP/1.1 200 OK\r\n"
+					"Content-Type: {}\r\n"
+					"Connection: close\r\n"
+					"Pragma: no-cache\r\n"
+					"Cache-Control: no-cache, no-store\r\n"
+					"Access-Control-Allow-Origin: *\r\n"
+					"\r\n",
+					httpd.content_type);
+		response = allocated.c_str();
 	}
 
 	ssize_t nbytes = GetSocket().Write(response, strlen(response));
-	if (gcc_unlikely(nbytes < 0)) {
+	if (nbytes < 0) [[unlikely]] {
 		const SocketErrorMessage msg;
 		FmtWarning(httpd_output_domain,
 			   "failed to write to client: {}",

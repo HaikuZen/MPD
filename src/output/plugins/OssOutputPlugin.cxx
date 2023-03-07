@@ -1,21 +1,5 @@
-/*
- * Copyright 2003-2022 The Music Player Daemon Project
- * http://www.musicpd.org
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Copyright The Music Player Daemon Project
 
 #include "OssOutputPlugin.hxx"
 #include "../OutputAPI.hxx"
@@ -388,8 +372,7 @@ oss_setup_sample_rate(FileDescriptor fd, AudioFormat &audio_format,
  * Convert a MPD sample format to its OSS counterpart.  Returns
  * AFMT_QUERY if there is no direct counterpart.
  */
-gcc_const
-static int
+static constexpr int
 sample_format_to_oss(SampleFormat format) noexcept
 {
 	switch (format) {
@@ -427,8 +410,7 @@ sample_format_to_oss(SampleFormat format) noexcept
  * Convert an OSS sample format to its MPD counterpart.  Returns
  * SampleFormat::UNDEFINED if there is no direct counterpart.
  */
-gcc_const
-static SampleFormat
+static constexpr SampleFormat
 sample_format_from_oss(int format) noexcept
 {
 	switch (format) {

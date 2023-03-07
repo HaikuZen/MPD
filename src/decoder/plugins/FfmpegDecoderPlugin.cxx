@@ -1,21 +1,5 @@
-/*
- * Copyright 2003-2022 The Music Player Daemon Project
- * http://www.musicpd.org
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along
- * with this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
- */
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Copyright The Music Player Daemon Project
 
 /* necessary because libavutil/common.h uses UINT64_C */
 #define __STDC_CONSTANT_MACROS
@@ -104,14 +88,14 @@ ffmpeg_finish() noexcept
 	av_dict_free(&avformat_options);
 }
 
-gcc_pure
+[[gnu::pure]]
 static bool
 IsAudio(const AVStream &stream) noexcept
 {
 	return stream.codecpar->codec_type == AVMEDIA_TYPE_AUDIO;
 }
 
-gcc_pure
+[[gnu::pure]]
 static int
 ffmpeg_find_audio_stream(const AVFormatContext &format_context) noexcept
 {
@@ -122,7 +106,7 @@ ffmpeg_find_audio_stream(const AVFormatContext &format_context) noexcept
 	return -1;
 }
 
-gcc_pure
+[[gnu::pure]]
 static bool
 IsPicture(const AVStream &stream) noexcept
 {
@@ -181,7 +165,7 @@ start_time_fallback(const AVStream &stream)
  * Convert AVPacket::pts to a stream-relative time stamp (still in
  * AVStream::time_base units).  Returns a negative value on error.
  */
-gcc_pure
+[[gnu::pure]]
 static int64_t
 StreamRelativePts(const AVPacket &packet, const AVStream &stream) noexcept
 {
@@ -197,7 +181,7 @@ StreamRelativePts(const AVPacket &packet, const AVStream &stream) noexcept
  * Convert a non-negative stream-relative time stamp in
  * AVStream::time_base units to a PCM frame number.
  */
-gcc_pure
+[[gnu::pure]]
 static uint64_t
 PtsToPcmFrame(uint64_t pts, const AVStream &stream,
 	      const AVCodecContext &codec_context) noexcept
@@ -339,7 +323,7 @@ ffmpeg_send_packet(DecoderClient &client, InputStream *is,
 	return cmd;
 }
 
-gcc_const
+[[gnu::const]]
 static SampleFormat
 ffmpeg_sample_format(enum AVSampleFormat sample_fmt) noexcept
 {
