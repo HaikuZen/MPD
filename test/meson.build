@@ -149,7 +149,7 @@ executable(
   include_directories: inc,
   dependencies: [
     fs_dep,
-    io_dep,
+    io_fs_dep,
   ],
 )
 
@@ -180,6 +180,7 @@ if zlib_dep.found()
     include_directories: inc,
     dependencies: [
       fs_dep,
+      io_fs_dep,
       zlib_dep,
     ],
   )
@@ -615,7 +616,7 @@ executable(
   'run_output.cxx',
   include_directories: inc,
   dependencies: [
-    output_glue_dep,
+    output_registry_dep,
     encoder_glue_dep,
     event_dep,
     cmdline_dep,
