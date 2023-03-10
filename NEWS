@@ -9,6 +9,9 @@ ver 0.24 (not yet released)
   - operator "starts_with"
   - show PCRE support in "config" response
   - apply Unicode normalization to case-insensitive filter expressions
+* database
+  - proxy: require MPD 0.21 or later
+  - proxy: require libmpdclient 2.15 or later
 * archive
   - add option to disable archive plugins in mpd.conf
 * input
@@ -16,15 +19,20 @@ ver 0.24 (not yet released)
   - curl: fix busy loop after connection failed
 * decoder
   - ffmpeg: require FFmpeg 4.0 or later
+  - gme: require GME 0.6 or later
   - hybrid_dsd: remove
   - opus: implement bitrate calculation
+  - sidplay: require libsidplayfp (drop support for the original sidplay)
   - wavpack: require libwavpack version 5
+* resampler
+  - soxr: require libsoxr 0.1.2 or later
 * player
   - add option "mixramp_analyzer" to scan MixRamp tags on-the-fly
   - "one-shot" consume mode
 * tags
   - new tags "TitleSort", "Mood"
 * output
+  - alsa: require alsa-lib 1.1 or later
   - pipewire: fix corruption bug due to missing lock
   - pipewire: map tags "Date" and "Comment"
 * switch to C++20
