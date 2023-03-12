@@ -36,9 +36,16 @@ struct DecoderPlugin {
 	void (*finish)() noexcept = nullptr;
 
 	/**
+	 * Return a set of supported filename suffixes.  Use this
+	 * instead of #suffixes if the supported suffixes can only be
+	 * determined at runtime.
+	 */
+	std::set<std::string, std::less<>> (*suffixes_function)() noexcept = nullptr;
+
+	/**
 	 * Return a set of supported protocols.
 	 */
-	std::set<std::string> (*protocols)() noexcept = nullptr;
+	std::set<std::string, std::less<>> (*protocols)() noexcept = nullptr;
 
 	/**
 	 * Decode an URI with a protocol listed in protocols().
@@ -138,7 +145,7 @@ struct DecoderPlugin {
 		return copy;
 	}
 
-	constexpr auto WithProtocols(std::set<std::string> (*_protocols)() noexcept,
+	constexpr auto WithProtocols(std::set<std::string, std::less<>> (*_protocols)() noexcept,
 				     void (*_uri_decode)(DecoderClient &client, const char *uri)) const noexcept {
 		auto copy = *this;
 		copy.protocols = _protocols;
@@ -149,6 +156,12 @@ struct DecoderPlugin {
 	constexpr auto WithSuffixes(const char *const*_suffixes) const noexcept {
 		auto copy = *this;
 		copy.suffixes = _suffixes;
+		return copy;
+	}
+
+	constexpr auto WithSuffixes(std::set<std::string, std::less<>> (*_suffixes)() noexcept) const noexcept {
+		auto copy = *this;
+		copy.suffixes_function = _suffixes;
 		return copy;
 	}
 

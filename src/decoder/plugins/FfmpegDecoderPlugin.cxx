@@ -26,8 +26,10 @@
 #include "tag/MixRampParser.hxx"
 #include "input/InputStream.hxx"
 #include "pcm/CheckAudioFormat.hxx"
+#include "util/IterableSplitString.hxx"
 #include "util/ScopeExit.hxx"
 #include "util/StringAPI.hxx"
+#include "util/StringCompare.hxx"
 #include "Log.hxx"
 
 extern "C" {
@@ -672,10 +674,10 @@ ffmpeg_uri_decode(DecoderClient &client, const char *uri)
 	FfmpegDecode(client, nullptr, *format_context);
 }
 
-static std::set<std::string>
+static std::set<std::string, std::less<>>
 ffmpeg_protocols() noexcept
 {
-	std::set<std::string> protocols;
+	std::set<std::string, std::less<>> protocols;
 
 	const AVInputFormat *format = nullptr;
 	void *opaque = nullptr;
@@ -690,33 +692,33 @@ ffmpeg_protocols() noexcept
 	return protocols;
 }
 
-/**
- * A list of extensions found for the formats supported by ffmpeg.
- * This list is current as of 02-23-09; To find out if there are more
- * supported formats, check the ffmpeg changelog since this date for
- * more formats.
- */
-static const char *const ffmpeg_suffixes[] = {
-	"16sv", "3g2", "3gp", "4xm", "8svx",
-	"aa3", "aac", "ac3", "adx", "afc", "aif",
-	"aifc", "aiff", "al", "alaw", "amr", "anim", "apc", "ape", "asf",
-	"atrac", "au", "aud", "avi", "avm2", "avs", "bap", "bfi", "c93", "cak",
-	"cin", "cmv", "cpk", "daud", "dct", "divx", "dts", "dv", "dvd", "dxa",
-	"eac3", "film", "flac", "flc", "fli", "fll", "flx", "flv", "g726",
-	"gsm", "gxf", "iss", "m1v", "m2v", "m2t", "m2ts",
-	"m4a", "m4b", "m4v",
-	"mad",
-	"mj2", "mjpeg", "mjpg", "mka", "mkv", "mlp", "mm", "mmf", "mov", "mp+",
-	"mp1", "mp2", "mp3", "mp4", "mpc", "mpeg", "mpg", "mpga", "mpp", "mpu",
-	"mve", "mvi", "mxf", "nc", "nsv", "nut", "nuv", "oga", "ogm", "ogv",
-	"ogx", "oma", "ogg", "omg", "opus", "psp", "pva", "qcp", "qt", "r3d", "ra",
-	"ram", "rl2", "rm", "rmvb", "roq", "rpl", "rvc", "shn", "smk", "snd",
-	"sol", "son", "spx", "str", "swf", "tak", "tgi", "tgq", "tgv", "thp", "ts",
-	"tsp", "tta", "xa", "xvid", "uv", "uv2", "vb", "vid", "vob", "voc",
-	"vp6", "vmd", "wav", "webm", "wma", "wmv", "wsaud", "wsvga", "wv",
-	"wve",
-	nullptr
-};
+static std::set<std::string, std::less<>>
+ffmpeg_suffixes() noexcept
+{
+	std::set<std::string, std::less<>> suffixes;
+
+	void *demuxer_opaque = nullptr;
+	while (const auto input_format = av_demuxer_iterate(&demuxer_opaque)) {
+		if (input_format->extensions != nullptr) {
+			for (const auto i : IterableSplitString(input_format->extensions, ','))
+				suffixes.emplace(i);
+		} else
+			suffixes.emplace(input_format->name);
+	}
+
+	void *codec_opaque = nullptr;
+	while (const auto codec = av_codec_iterate(&codec_opaque)) {
+		if (StringStartsWith(codec->name, "dsd_")) {
+			/* FFmpeg was compiled with DSD support */
+			suffixes.emplace("dff");
+			suffixes.emplace("dsf");
+		} else if (StringIsEqual(codec->name, "dst")) {
+			suffixes.emplace("dst");
+		}
+	}
+
+	return suffixes;
+}
 
 static const char *const ffmpeg_mime_types[] = {
 	"application/flv",
