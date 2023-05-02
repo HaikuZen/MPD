@@ -14,7 +14,7 @@
 #include "archive/ArchivePlugin.hxx"
 #include "archive/ArchiveFile.hxx"
 #include "archive/ArchiveVisitor.hxx"
-#include "util/StringCompare.hxx"
+#include "util/StringSplit.hxx"
 #include "Log.hxx"
 
 #include <exception>
@@ -35,25 +35,33 @@ LockFindSong(Directory &directory, std::string_view name) noexcept
 	return directory.FindSong(name);
 }
 
+[[gnu::pure]]
+static bool
+IsAcceptableFilename(std::string_view name) noexcept
+{
+	return !name.empty() &&
+		/* newlines cannot be represented in MPD's protocol */
+		name.find('\n') == name.npos;
+}
+
 void
 UpdateWalk::UpdateArchiveTree(ArchiveFile &archive, Directory &directory,
-			      const char *name) noexcept
+			      std::string_view name) noexcept
 {
-	const char *tmp = std::strchr(name, '/');
-	if (tmp) {
-		const std::string_view child_name(name, tmp - name);
+	const auto [child_name, rest] = Split(name, '/');
+	if (rest.data() != nullptr) {
+		if (!IsAcceptableFilename(child_name))
+			return;
+
 		//add dir is not there already
 		Directory *subdir = LockMakeChild(directory, child_name);
 		subdir->device = DEVICE_INARCHIVE;
 
 		//create directories first
-		UpdateArchiveTree(archive, *subdir, tmp + 1);
+		UpdateArchiveTree(archive, *subdir, rest);
 	} else {
-		if (StringIsEmpty(name)) {
-			LogWarning(update_domain,
-				   "archive returned directory only");
+		if (!IsAcceptableFilename(name))
 			return;
-		}
 
 		//add file
 		Song *song = LockFindSong(directory, name);
