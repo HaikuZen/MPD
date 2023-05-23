@@ -75,6 +75,12 @@ struct Directory : IntrusiveListHook<> {
 	 */
 	DatabasePtr mounted_database;
 
+	/**
+	 * This field is used by the database update to check whether
+	 * an item has disappeared.
+	 */
+	bool mark;
+
 public:
 	Directory(std::string &&_path_utf8, Directory *_parent) noexcept;
 	~Directory() noexcept;
@@ -256,6 +262,14 @@ public:
 	 * stale), and return ownership to the caller.
 	 */
 	SongPtr RemoveSong(Song *song) noexcept;
+
+	/**
+	 * Recursively walk through the whole tree and set all
+	 * `Song::in_playlist` fields to `false`.
+	 *
+	 * Caller must lock the #db_mutex.
+	 */
+	void ClearInPlaylist() noexcept;
 
 	/**
 	 * Caller must lock the #db_mutex.
