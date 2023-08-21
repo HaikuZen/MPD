@@ -78,30 +78,25 @@ using AutoUnlinkIntrusiveListHook =
 	IntrusiveListHook<IntrusiveHookMode::AUTO_UNLINK>;
 
 /**
- * Detect the hook type which is embedded in the given type as a base
- * class.  This is a template to postpone the type checks, to allow
- * forward-declared types.
- */
-template<typename U>
-struct IntrusiveListHookDetection {
-	/* TODO can this be simplified somehow, without checking for
-	   all possible enum values? */
-	using type = std::conditional_t<std::is_base_of_v<IntrusiveListHook<IntrusiveHookMode::NORMAL>, U>,
-					IntrusiveListHook<IntrusiveHookMode::NORMAL>,
-					std::conditional_t<std::is_base_of_v<IntrusiveListHook<IntrusiveHookMode::TRACK>, U>,
-							   IntrusiveListHook<IntrusiveHookMode::TRACK>,
-							   std::conditional_t<std::is_base_of_v<IntrusiveListHook<IntrusiveHookMode::AUTO_UNLINK>, U>,
-									      IntrusiveListHook<IntrusiveHookMode::AUTO_UNLINK>,
-									      void>>>;
-};
-
-/**
  * For classes which embed #IntrusiveListHook as base class.
  */
 template<typename T>
 struct IntrusiveListBaseHookTraits {
+	/* a never-called helper function which is used by _Cast() */
+	template<IntrusiveHookMode mode>
+	static constexpr IntrusiveListHook<mode> _Identity(const IntrusiveListHook<mode> &) noexcept;
+
+	/* another never-called helper function which "calls"
+	   _Identity(), implicitly casting the item to the
+	   IntrusiveListHook specialization; we use this to detect
+	   which IntrusiveListHook specialization is used */
 	template<typename U>
-	using Hook = typename IntrusiveListHookDetection<U>::type;
+	static constexpr auto _Cast(const U &u) noexcept {
+		return decltype(_Identity(u))();
+	}
+
+	template<typename U>
+	using Hook = decltype(_Cast(std::declval<U>()));
 
 	static constexpr T *Cast(IntrusiveListNode *node) noexcept {
 		auto *hook = &Hook<T>::Cast(*node);
@@ -497,7 +492,7 @@ public:
 			      GetHookMode() < IntrusiveHookMode::AUTO_UNLINK,
 			      "Can't use auto-unlink hooks with constant_time_size");
 
-		auto &existing_node = ToNode(*p);
+		auto &existing_node = *p.cursor;
 		auto &new_node = ToNode(t);
 
 		IntrusiveListNode::Connect(*existing_node.prev,
@@ -534,13 +529,13 @@ public:
 		if (_begin == _end)
 			return;
 
-		auto &next_node = ToNode(*position);
-		auto &prev_node = ToNode(*std::prev(position));
+		auto &next_node = *position.cursor;
+		auto &prev_node = *std::prev(position).cursor;
 
-		auto &first_node = ToNode(*_begin);
-		auto &before_first_node = ToNode(*std::prev(_begin));
-		auto &last_node = ToNode(*std::prev(_end));
-		auto &after_last_node = ToNode(*_end);
+		auto &first_node = *_begin.cursor;
+		auto &before_first_node = *std::prev(_begin).cursor;
+		auto &last_node = *std::prev(_end).cursor;
+		auto &after_last_node = *_end.cursor;
 
 		/* remove from the other list */
 		IntrusiveListNode::Connect(before_first_node, after_last_node);
