@@ -26,6 +26,10 @@ private:
 public:
 	StaticSocketAddress() = default;
 
+	explicit StaticSocketAddress(SocketAddress src) noexcept {
+		*this = src;
+	}
+
 	StaticSocketAddress &operator=(SocketAddress other) noexcept;
 
 	constexpr operator SocketAddress() const noexcept {
@@ -111,6 +115,11 @@ public:
 	 */
 	bool SetPort(unsigned port) noexcept;
 #endif
+
+	[[gnu::pure]]
+	std::span<const std::byte> GetSteadyPart() const noexcept {
+		return SocketAddress{*this}.GetSteadyPart();
+	}
 
 	[[gnu::pure]]
 	bool operator==(SocketAddress other) const noexcept {

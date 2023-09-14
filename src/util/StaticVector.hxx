@@ -115,10 +115,8 @@ public:
 			/* we don't need to call any destructor */
 			the_size = 0;
 		} else {
-			while (!empty()) {
-				back().~T();
-				--the_size;
-			}
+			while (!empty())
+				pop_back();
 		}
 	}
 
@@ -191,28 +189,44 @@ public:
 		return Launder(array.data());
 	}
 
-	constexpr void push_back(const_reference value) {
-		if (full())
-			throw std::bad_alloc{};
-
-		::new(&array[the_size]) T(value);
-		++the_size;
+	constexpr reference push_back(const_reference value) {
+		return emplace_back(value);
 	}
 
-	constexpr void push_back(T &&value) {
-		if (full())
-			throw std::bad_alloc{};
-
-		::new(&array[the_size]) T(std::move(value));
-		++the_size;
+	constexpr reference push_back(T &&value) {
+		return emplace_back(std::move(value));
 	}
 
 	template<typename... Args>
-	constexpr void emplace_back(Args&&... args) {
+	constexpr reference emplace_back(Args&&... args) {
 		if (full())
 			throw std::bad_alloc{};
 
 		::new(&array[the_size]) T(std::forward<Args>(args)...);
-		++the_size;
+		return *Launder(&array[the_size++]);
+	}
+
+	constexpr void pop_front() noexcept {
+		assert(!empty());
+
+		erase(begin());
+	}
+
+	constexpr void pop_back() noexcept {
+		assert(!empty());
+
+		back().~T();
+		--the_size;
+	}
+
+	constexpr iterator erase(iterator first, iterator last) noexcept {
+		std::size_t n = std::distance(first, last);
+		std::move(last, end(), first);
+		the_size -= n;
+		return first;
+	}
+
+	constexpr iterator erase(iterator pos) noexcept {
+		return erase(pos, std::next(pos));
 	}
 };

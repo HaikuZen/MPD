@@ -38,8 +38,8 @@ libogg = CmakeProject(
 )
 
 opus = AutotoolsProject(
-    'https://archive.mozilla.org/pub/opus/opus-1.3.1.tar.gz',
-    '65b58e1e25b2a114157014736a3d9dfeaad8d41be1c8179866f144a2fb44ff9d',
+    'https://downloads.xiph.org/releases/opus/opus-1.4.tar.gz',
+    'c9b32b4253be5ae63d1ff16eea06b94b5f0f2951b7a02aceef58e3a3ce49c51f',
     'lib/libopus.a',
     [
         '--disable-shared', '--enable-static',
@@ -52,8 +52,8 @@ opus = AutotoolsProject(
 )
 
 flac = AutotoolsProject(
-    'http://downloads.xiph.org/releases/flac/flac-1.4.2.tar.xz',
-    'e322d58a1f48d23d9dd38f432672865f6f79e73a6f9cc5a5f57fcaa83eb5a8e4',
+    'http://downloads.xiph.org/releases/flac/flac-1.4.3.tar.xz',
+    '6c58e69cd22348f441b861092b825e591d0b822e106de6eb0ee4d05d27205b70',
     'lib/libFLAC.a',
     [
         '--disable-shared', '--enable-static',
@@ -66,8 +66,8 @@ flac = AutotoolsProject(
 )
 
 zlib = ZlibProject(
-    'http://zlib.net/zlib-1.2.13.tar.xz',
-    'd14c38e313afc35a9a8760dadf26042f51ea0f5d154b0630a31da0540107fb98',
+    'http://zlib.net/zlib-1.3.tar.xz',
+    '8a9ba2898e1d0d774eca6ba5b4627a11e5588ba85c8851336eb38de4683050a7',
     'lib/libz.a',
 )
 
@@ -120,6 +120,7 @@ libmodplug = AutotoolsProject(
     [
         '--disable-shared', '--enable-static',
     ],
+    patches='src/lib/modplug/patches',
 )
 
 libopenmpt = AutotoolsProject(
@@ -607,14 +608,14 @@ ffmpeg = FfmpegProject(
 )
 
 openssl = OpenSSLProject(
-    'https://www.openssl.org/source/openssl-3.1.0.tar.gz',
-    'aaa925ad9828745c4cad9d9efeb273deca820f2cdcf2c3ac7d7c1212b7c497b4',
+    'https://www.openssl.org/source/openssl-3.1.2.tar.gz',
+    'a0ce69b8b97ea6a35b96875235aa453b966ba3cba8af2de23657d8b6767d6539',
     'include/openssl/ossl_typ.h',
 )
 
 curl = CmakeProject(
-    'https://curl.se/download/curl-8.0.1.tar.xz',
-    '0a381cd82f4d00a9a334438b8ca239afea5bfefcfa9a1025f2bf118e79e0b5f0',
+    'https://curl.se/download/curl-8.2.1.tar.xz',
+    'dd322f6bd0a20e6cebdfd388f69e98c3d183bed792cf4713c8a7ef498cba4894',
     'lib/libcurl.a',
     [
         '-DBUILD_CURL_EXE=OFF',

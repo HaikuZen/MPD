@@ -10,6 +10,15 @@
 #include <array>
 #include <numeric> // for std::accumulate()
 
+struct IntrusiveHashSetOptions {
+	bool constant_time_size = false;
+
+	/**
+	 * @see IntrusiveListOptions::zero_initialized
+	 */
+	bool zero_initialized = false;
+};
+
 template<IntrusiveHookMode mode=IntrusiveHookMode::NORMAL>
 struct IntrusiveHashSetHook {
 	using SiblingsHook = IntrusiveListHook<mode>;
@@ -106,8 +115,10 @@ struct IntrusiveHashSetOperators {
 template<typename T, std::size_t table_size,
 	 typename Operators,
 	 typename HookTraits=IntrusiveHashSetBaseHookTraits<T>,
-	 bool constant_time_size=false>
+	 IntrusiveHashSetOptions options=IntrusiveHashSetOptions{}>
 class IntrusiveHashSet {
+	static constexpr bool constant_time_size = options.constant_time_size;
+
 	[[no_unique_address]]
 	OptionalCounter<constant_time_size> counter;
 
@@ -135,7 +146,7 @@ class IntrusiveHashSet {
 		}
 	};
 
-	using Bucket = IntrusiveList<T, BucketHookTraits>;
+	using Bucket = IntrusiveList<T, BucketHookTraits, IntrusiveListOptions{.zero_initialized = options.zero_initialized}>;
 	std::array<Bucket, table_size> table;
 
 	using bucket_iterator = typename Bucket::iterator;
@@ -256,6 +267,25 @@ public:
 		auto &bucket = GetBucket(key);
 		for (auto &i : bucket)
 			if (ops.equal(key, ops.get_key(i)))
+				return {bucket.iterator_to(i), false};
+
+		/* bucket.end() is a pointer to the bucket's list
+		   head, a stable value that is guaranteed to be still
+		   valid when insert_commit() gets called
+		   eventually */
+		return {bucket.end(), true};
+	}
+
+	/**
+	 * Like insert_check(), but existing items are only considered
+	 * conflicting if they match the given predicate.
+	 */
+	[[nodiscard]] [[gnu::pure]]
+	constexpr std::pair<bucket_iterator, bool> insert_check_if(const auto &key,
+								   std::predicate<const_reference> auto pred) noexcept {
+		auto &bucket = GetBucket(key);
+		for (auto &i : bucket)
+			if (ops.equal(key, ops.get_key(i)) && pred(i))
 				return {bucket.iterator_to(i), false};
 
 		/* bucket.end() is a pointer to the bucket's list

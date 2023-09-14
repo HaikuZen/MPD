@@ -13,6 +13,18 @@
 #include <type_traits>
 #include <utility>
 
+struct IntrusiveListOptions {
+	bool constant_time_size = false;
+
+	/**
+	 * Initialize the list head with nullptr (all zeroes) which
+	 * adds some code for checking nullptr, but may reduce the
+	 * data section for statically allocated lists.  It's a
+	 * trade-off.
+	 */
+	bool zero_initialized = false;
+};
+
 struct IntrusiveListNode {
 	IntrusiveListNode *next, *prev;
 
@@ -27,7 +39,7 @@ template<IntrusiveHookMode _mode=IntrusiveHookMode::NORMAL>
 class IntrusiveListHook {
 	template<typename T> friend struct IntrusiveListBaseHookTraits;
 	template<auto member> friend struct IntrusiveListMemberHookTraits;
-	template<typename T, typename HookTraits, bool> friend class IntrusiveList;
+	template<typename T, typename HookTraits, IntrusiveListOptions> friend class IntrusiveList;
 
 protected:
 	IntrusiveListNode siblings;
@@ -135,9 +147,13 @@ struct IntrusiveListMemberHookTraits {
  */
 template<typename T,
 	 typename HookTraits=IntrusiveListBaseHookTraits<T>,
-	 bool constant_time_size=false>
+	 IntrusiveListOptions options=IntrusiveListOptions{}>
 class IntrusiveList {
-	IntrusiveListNode head{&head, &head};
+	static constexpr bool constant_time_size = options.constant_time_size;
+
+	IntrusiveListNode head = options.zero_initialized
+		? IntrusiveListNode{nullptr, nullptr}
+		: IntrusiveListNode{&head, &head};
 
 	[[no_unique_address]]
 	OptionalCounter<constant_time_size> counter;
@@ -234,6 +250,10 @@ public:
 	}
 
 	constexpr bool empty() const noexcept {
+		if constexpr (options.zero_initialized)
+			if (head.next == nullptr)
+				return true;
+
 		return head.next == &head;
 	}
 
@@ -377,6 +397,10 @@ public:
 	};
 
 	constexpr iterator begin() noexcept {
+		if constexpr (options.zero_initialized)
+			if (head.next == nullptr)
+				return end();
+
 		return {head.next};
 	}
 
@@ -448,6 +472,10 @@ public:
 	};
 
 	constexpr const_iterator begin() const noexcept {
+		if constexpr (options.zero_initialized)
+			if (head.next == nullptr)
+				return end();
+
 		return {head.next};
 	}
 
@@ -492,6 +520,10 @@ public:
 			      GetHookMode() < IntrusiveHookMode::AUTO_UNLINK,
 			      "Can't use auto-unlink hooks with constant_time_size");
 
+		if constexpr (options.zero_initialized)
+			if (head.next == nullptr)
+				head = {&head, &head};
+
 		auto &existing_node = *p.cursor;
 		auto &new_node = ToNode(t);
 
@@ -506,6 +538,10 @@ public:
 	 * Like insert(), but insert after the given position.
 	 */
 	void insert_after(iterator p, reference t) noexcept {
+		if constexpr (options.zero_initialized)
+			if (head.next == nullptr)
+				head = {&head, &head};
+
 		insert(std::next(p), t);
 	}
 
@@ -528,6 +564,10 @@ public:
 		    iterator _begin, iterator _end, size_type n) noexcept {
 		if (_begin == _end)
 			return;
+
+		if constexpr (options.zero_initialized)
+			if (head.next == nullptr)
+				head = {&head, &head};
 
 		auto &next_node = *position.cursor;
 		auto &prev_node = *std::prev(position).cursor;
