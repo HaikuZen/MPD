@@ -487,6 +487,9 @@ public:
 		return {&ToNode(t)};
 	}
 
+	/**
+	 * @return an iterator to the item following the specified one
+	 */
 	iterator erase(iterator i) noexcept {
 		auto result = std::next(i);
 		ToHook(*i).unlink();
@@ -494,6 +497,9 @@ public:
 		return result;
 	}
 
+	/**
+	 * @return an iterator to the item following the specified one
+	 */
 	iterator erase_and_dispose(iterator i,
 				   Disposer<value_type> auto disposer) noexcept {
 		auto result = erase(i);
@@ -501,12 +507,12 @@ public:
 		return result;
 	}
 
-	void push_front(reference t) noexcept {
-		insert(begin(), t);
+	iterator push_front(reference t) noexcept {
+		return insert(begin(), t);
 	}
 
-	void push_back(reference t) noexcept {
-		insert(end(), t);
+	iterator push_back(reference t) noexcept {
+		return insert(end(), t);
 	}
 
 	/**
@@ -514,8 +520,10 @@ public:
 	 *
 	 * @param p a valid iterator (end() is allowed)for this list
 	 * describing the position where to insert
+	 *
+	 * @return an iterator to the new item
 	 */
-	void insert(iterator p, reference t) noexcept {
+	iterator insert(iterator p, reference t) noexcept {
 		static_assert(!constant_time_size ||
 			      GetHookMode() < IntrusiveHookMode::AUTO_UNLINK,
 			      "Can't use auto-unlink hooks with constant_time_size");
@@ -532,17 +540,19 @@ public:
 		IntrusiveListNode::Connect(new_node, existing_node);
 
 		++counter;
+
+		return iterator_to(t);
 	}
 
 	/**
 	 * Like insert(), but insert after the given position.
 	 */
-	void insert_after(iterator p, reference t) noexcept {
+	iterator insert_after(iterator p, reference t) noexcept {
 		if constexpr (options.zero_initialized)
 			if (head.next == nullptr)
 				head = {&head, &head};
 
-		insert(std::next(p), t);
+		return insert(std::next(p), t);
 	}
 
 	/**
