@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Copyright The Music Player Daemon Project
 
-#ifndef MPD_BUFFERED_SOCKET_HXX
-#define MPD_BUFFERED_SOCKET_HXX
+#pragma once
 
 #include "SocketEvent.hxx"
 #include "util/StaticFifoBuffer.hxx"
 
 #include <cassert>
-#include <cstdint>
+#include <cstddef>
 #include <exception>
+#include <span>
 #include <type_traits>
 
 class EventLoop;
@@ -18,7 +18,7 @@ class EventLoop;
  * A #SocketEvent specialization that adds an input buffer.
  */
 class BufferedSocket {
-	StaticFifoBuffer<uint8_t, 8192> input;
+	StaticFifoBuffer<std::byte, 8192> input;
 
 protected:
 	SocketEvent event;
@@ -53,7 +53,7 @@ private:
 	 * socket isn't ready for reading, -1 on error (the socket has
 	 * been closed and probably destructed)
 	 */
-	ssize_t DirectRead(void *data, size_t length) noexcept;
+	ssize_t DirectRead(std::span<std::byte> dest) noexcept;
 
 	/**
 	 * Receive data from the socket to the input buffer.
@@ -120,5 +120,3 @@ protected:
 
 	virtual void OnSocketReady(unsigned flags) noexcept;
 };
-
-#endif

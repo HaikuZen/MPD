@@ -99,7 +99,7 @@ RunConvert(PcmConvert &convert, size_t in_frame_size,
 			const auto dest = buffer.Write();
 			assert(!dest.empty());
 
-			ssize_t nbytes = in_fd.Read(dest.data(), dest.size());
+			ssize_t nbytes = in_fd.Read(dest);
 			if (nbytes <= 0)
 				break;
 
@@ -116,7 +116,7 @@ RunConvert(PcmConvert &convert, size_t in_frame_size,
 		buffer.Consume(src.size());
 
 		auto output = convert.Convert(src);
-		out_fd.FullWrite(output.data(), output.size());
+		out_fd.FullWrite(output);
 	}
 
 	while (true) {
@@ -124,7 +124,7 @@ RunConvert(PcmConvert &convert, size_t in_frame_size,
 		if (output.data() == nullptr)
 			break;
 
-		out_fd.FullWrite(output.data(), output.size());
+		out_fd.FullWrite(output);
 	}
 }
 

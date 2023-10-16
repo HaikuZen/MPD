@@ -33,6 +33,7 @@
 
 #include <map>
 #include <string>
+#include <list>
 
 class Path;
 struct Sticker;
@@ -49,12 +50,20 @@ class StickerDatabase {
 		  SQL_FIND_VALUE,
 		  SQL_FIND_LT,
 		  SQL_FIND_GT,
+		  SQL_DISTINCT_TYPE_URI,
+		  SQL_TRANSACTION_BEGIN,
+		  SQL_TRANSACTION_COMMIT,
+		  SQL_TRANSACTION_ROLLBACK,
 
 		  SQL_COUNT
 	};
 
+	std::string path;
+
 	Sqlite::Database db;
 	sqlite3_stmt *stmt[SQL_COUNT];
+
+	explicit StickerDatabase(const char *_path);
 
 public:
 	/**
@@ -67,6 +76,14 @@ public:
 
 	StickerDatabase(StickerDatabase &&) noexcept = default;
 	StickerDatabase &operator=(StickerDatabase &&) noexcept = default;
+
+	/**
+	 * Open another connection to the same database file.
+	 */
+	[[nodiscard]]
+	StickerDatabase Reopen() const {
+		return StickerDatabase{path.c_str()};
+	}
 
 	/**
 	 * Returns one value from an object's sticker record.  Returns an
@@ -128,6 +145,20 @@ public:
 		  void (*func)(const char *uri, const char *value,
 			       void *user_data),
 		  void *user_data);
+
+	using StickerTypeUriPair = std::pair<std::string, std::string>;
+
+	/**
+	 * @return A list of unique type-uri pairs of all the stickers
+	 * in the database.
+	 */
+	std::list<StickerTypeUriPair> GetUniqueStickers();
+
+	/**
+	 * Delete stickers by type and uri
+	 * @param stickers A list of stickers to delete
+	 */
+	void BatchDeleteNoIdle(const std::list<StickerTypeUriPair> &stickers);
 
 private:
 	void ListValues(std::map<std::string, std::string, std::less<>> &table,

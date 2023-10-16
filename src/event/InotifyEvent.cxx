@@ -35,10 +35,16 @@ InotifyEvent::~InotifyEvent() noexcept
 }
 
 int
+InotifyEvent::TryAddWatch(const char *pathname, uint32_t mask) noexcept
+{
+	return inotify_add_watch(event.GetFileDescriptor().Get(),
+				 pathname, mask);
+}
+
+int
 InotifyEvent::AddWatch(const char *pathname, uint32_t mask)
 {
-	int wd = inotify_add_watch(event.GetFileDescriptor().Get(),
-				   pathname, mask);
+	int wd = TryAddWatch(pathname, mask);
 	if (wd < 0)
 		throw FmtErrno("inotify_add_watch('{}') failed", pathname);
 
@@ -64,8 +70,7 @@ try {
 	static_assert(sizeof(buffer) >= sizeof(struct inotify_event) + NAME_MAX + 1,
 		      "inotify buffer too small");
 
-	ssize_t nbytes = event.GetFileDescriptor().Read(buffer.data(),
-							buffer.size());
+	ssize_t nbytes = event.GetFileDescriptor().Read(buffer);
 	if (nbytes <= 0) [[unlikely]] {
 		if (nbytes == 0)
 			throw std::runtime_error{"EOF from inotify"};

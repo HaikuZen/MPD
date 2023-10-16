@@ -5,6 +5,8 @@
 #define READER_HXX
 
 #include <cstddef>
+#include <span>
+#include <type_traits>
 
 /**
  * An interface that can read bytes from a stream until the stream
@@ -24,8 +26,20 @@ public:
 	 * @return the number of bytes read into the given buffer or 0
 	 * on end-of-stream
 	 */
-	[[gnu::nonnull]]
-	virtual std::size_t Read(void *data, std::size_t size) = 0;
+	[[nodiscard]]
+	virtual std::size_t Read(std::span<std::byte> dest) = 0;
+
+	/**
+	 * Like Read(), but throws an exception when there is not
+	 * enough data to fill the destination buffer.
+	 */
+	void ReadFull(std::span<std::byte> dest);
+
+	template<typename T>
+	requires std::is_standard_layout_v<T> && std::is_trivially_copyable_v<T>
+	void ReadT(T &dest) {
+		ReadFull(std::as_writable_bytes(std::span{&dest, 1}));
+	}
 };
 
 #endif
