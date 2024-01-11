@@ -21,6 +21,7 @@
 #include "thread/Mutex.hxx"
 #include "thread/Cond.hxx"
 #include "util/ASCII.hxx"
+#include "util/NumberParser.hxx"
 #include "util/SpanCast.hxx"
 #include "util/StringCompare.hxx"
 #include "util/StringSplit.hxx"
@@ -30,6 +31,8 @@
 #include <memory>
 #include <string>
 #include <utility>
+
+using std::string_view_literals::operator""sv;
 
 class CurlStorage final : public Storage {
 	const std::string base;
@@ -158,21 +161,18 @@ struct DavResponse {
 
 [[gnu::pure]]
 static unsigned
-ParseStatus(const char *s) noexcept
+ParseStatus(std::string_view s) noexcept
 {
 	/* skip the "HTTP/1.1" prefix */
-	const char *space = std::strchr(s, ' ');
-	if (space == nullptr)
-		return 0;
+	const auto [http_1_1, rest] = Split(s, ' ');
 
-	return strtoul(space + 1, nullptr, 10);
-}
+	/* skip the string suffix */
+	const auto [status_string, _] = Split(rest, ' ');
 
-[[gnu::pure]]
-static unsigned
-ParseStatus(const char *s, size_t length) noexcept
-{
-	return ParseStatus(std::string(s, length).c_str());
+	if (const auto status = ParseInteger<unsigned>(status_string))
+		return *status;
+
+	return 0;
 }
 
 [[gnu::pure]]
@@ -184,23 +184,19 @@ ParseTimeStamp(const char *s) noexcept
 
 [[gnu::pure]]
 static std::chrono::system_clock::time_point
-ParseTimeStamp(const char *s, size_t length) noexcept
+ParseTimeStamp(std::string_view s) noexcept
 {
-	return ParseTimeStamp(std::string(s, length).c_str());
+	return ParseTimeStamp(std::string{s}.c_str());
 }
 
 [[gnu::pure]]
 static uint64_t
-ParseU64(const char *s) noexcept
+ParseU64(std::string_view s) noexcept
 {
-	return strtoull(s, nullptr, 10);
-}
+	if (const auto i = ParseInteger<uint_least64_t>(s))
+		return *i;
 
-[[gnu::pure]]
-static uint64_t
-ParseU64(const char *s, size_t length) noexcept
-{
-	return ParseU64(std::string(s, length).c_str());
+	return 0;
 }
 
 [[gnu::pure]]
@@ -244,29 +240,30 @@ public:
 		:BlockingHttpRequest(_curl, _uri),
 		 CommonExpatParser(ExpatNamespaceSeparator{'|'})
 	{
-		request.SetOption(CURLOPT_CUSTOMREQUEST, "PROPFIND");
-		request.SetOption(CURLOPT_FOLLOWLOCATION, 1L);
-		request.SetOption(CURLOPT_MAXREDIRS, 1L);
+		auto &easy = request.GetEasy();
+
+		easy.SetOption(CURLOPT_CUSTOMREQUEST, "PROPFIND");
+		easy.SetOption(CURLOPT_FOLLOWLOCATION, 1L);
+		easy.SetOption(CURLOPT_MAXREDIRS, 1L);
 
 		/* this option eliminates the probe request when
 		   username/password are specified */
-		request.SetOption(CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+		easy.SetOption(CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
 
 		request_headers.Append(FmtBuffer<40>("depth: {}", depth));
 		request_headers.Append("content-type: text/xml");
 
-		request.SetOption(CURLOPT_HTTPHEADER, request_headers.Get());
+		easy.SetRequestHeaders(request_headers.Get());
 
-		request.SetOption(CURLOPT_POSTFIELDS,
-				  "<?xml version=\"1.0\"?>\n"
-				  "<a:propfind xmlns:a=\"DAV:\">"
-				  "<a:prop>"
-				  "<a:resourcetype/>"
-				  "<a:getcontenttype/>"
-				  "<a:getcontentlength/>"
-				  "<a:getlastmodified/>"
-				  "</a:prop>"
-				  "</a:propfind>");
+		easy.SetRequestBody("<?xml version=\"1.0\"?>\n"
+				    "<a:propfind xmlns:a=\"DAV:\">"
+				    "<a:prop>"
+				    "<a:resourcetype/>"
+				    "<a:getcontenttype/>"
+				    "<a:getcontentlength/>"
+				    "<a:getlastmodified/>"
+				    "</a:prop>"
+				    "</a:propfind>"sv);
 	}
 
 	using BlockingHttpRequest::GetEasy;
@@ -294,9 +291,8 @@ private:
 			throw std::runtime_error("Unexpected Content-Type from WebDAV server");
 	}
 
-	void OnData(std::span<const std::byte> _src) final {
-		auto src = ToStringView(_src);
-		Parse(src.data(), src.size());
+	void OnData(std::span<const std::byte> src) final {
+		Parse(ToStringView(src));
 	}
 
 	void OnEnd() final {
@@ -389,7 +385,7 @@ private:
 		}
 	}
 
-	void CharacterData(const XML_Char *s, int len) final {
+	void CharacterData(std::string_view s) final {
 		switch (state) {
 		case State::ROOT:
 		case State::PROPSTAT:
@@ -398,19 +394,19 @@ private:
 			break;
 
 		case State::HREF:
-			response.href.append(s, len);
+			response.href.append(s);
 			break;
 
 		case State::STATUS:
-			response.status = ParseStatus(s, len);
+			response.status = ParseStatus(s);
 			break;
 
 		case State::MTIME:
-			response.mtime = ParseTimeStamp(s, len);
+			response.mtime = ParseTimeStamp(s);
 			break;
 
 		case State::LENGTH:
-			response.length = ParseU64(s, len);
+			response.length = ParseU64(s);
 			break;
 		}
 	}

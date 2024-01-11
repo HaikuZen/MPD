@@ -8,7 +8,7 @@
 
 #include <cstddef>
 
-class Client;
+class IClient;
 class Database;
 class Storage;
 class DetachedSong;
@@ -22,7 +22,7 @@ struct LocatedUri;
  * is assumed that all local files are allowed.
  */
 class SongLoader {
-	const Client *const client;
+	const IClient *const client;
 
 #ifdef ENABLE_DATABASE
 	const Database *const db;
@@ -31,21 +31,21 @@ class SongLoader {
 
 public:
 #ifdef ENABLE_DATABASE
-	explicit SongLoader(const Client &_client);
-	SongLoader(const Database *_db, const Storage *_storage)
+	explicit SongLoader(const IClient &_client) noexcept;
+	SongLoader(const Database *_db, const Storage *_storage) noexcept
 		:client(nullptr), db(_db), storage(_storage) {}
-	SongLoader(const Client &_client, const Database *_db,
-		   const Storage *_storage)
+	SongLoader(const IClient &_client, const Database *_db,
+		   const Storage *_storage) noexcept
 		:client(&_client), db(_db), storage(_storage) {}
 #else
-	explicit SongLoader(const Client &_client)
+	explicit SongLoader(const IClient &_client) noexcept
 		:client(&_client) {}
-	explicit SongLoader(std::nullptr_t, std::nullptr_t)
+	explicit SongLoader(std::nullptr_t, std::nullptr_t) noexcept
 		:client(nullptr) {}
 #endif
 
 #ifdef ENABLE_DATABASE
-	const Storage *GetStorage() const {
+	const Storage *GetStorage() const noexcept {
 		return storage;
 	}
 #endif

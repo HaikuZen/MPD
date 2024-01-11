@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Copyright The Music Player Daemon Project
 
-#ifndef _UPNPDEV_HXX_INCLUDED_
-#define _UPNPDEV_HXX_INCLUDED_
+#pragma once
 
-#include <vector>
+#include <forward_list>
 #include <string>
 
 /**
@@ -44,20 +43,11 @@ public:
 	// Model name: e.g. MediaTomb, DNS-327L ("modelName")
 	std::string modelName;
 	// Services provided by this device.
-	std::vector<UPnPService> services;
-
-	UPnPDevice() = default;
-	UPnPDevice(const UPnPDevice &) = delete;
-	UPnPDevice(UPnPDevice &&) = default;
-	UPnPDevice &operator=(UPnPDevice &&) = default;
-
-	~UPnPDevice() noexcept;
+	std::forward_list<UPnPService> services;
 
 	/** Build device from xml description downloaded from discovery
 	 * @param url where the description came from
 	 * @param description the xml device description
 	 */
-	void Parse(const std::string &url, const char *description);
+	void Parse(std::string_view url, std::string_view description);
 };
-
-#endif /* _UPNPDEV_HXX_INCLUDED_ */

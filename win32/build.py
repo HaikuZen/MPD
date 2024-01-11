@@ -38,19 +38,12 @@ root_path = os.path.join(arch_path, 'root')
 # a list of third-party libraries to be used by MPD on Android
 from build.libs import *
 thirdparty_libs = [
-    libmpdclient,
-    libogg,
-    opus,
-    flac,
     zlib,
-    libid3tag,
-    liblame,
     libmodplug,
     libopenmpt,
     wildmidi,
     gme,
     ffmpeg,
-    curl,
     libnfs,
     libsamplerate,
 ]

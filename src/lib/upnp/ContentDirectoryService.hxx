@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Copyright The Music Player Daemon Project
 
-#ifndef _UPNPDIR_HXX_INCLUDED_
-#define _UPNPDIR_HXX_INCLUDED_
+#pragma once
 
-#include "Compat.hxx"
+#include <upnp.h>
 
 #include <string>
 #include <forward_list>
@@ -34,8 +33,6 @@ class ContentDirectoryService {
 	std::string m_serviceType;
 	std::string m_deviceId;
 	std::string m_friendlyName;
-	std::string m_manufacturer;
-	std::string m_modelName;
 
 	int m_rdreqcnt; // Slice size to use when reading
 
@@ -101,9 +98,7 @@ public:
 	}
 
 	/** Retrieve the "friendly name" for this server, useful for display. */
-	const char *getFriendlyName() const noexcept {
-		return m_friendlyName.c_str();
+	const std::string &GetFriendlyName() const noexcept {
+		return m_friendlyName;
 	}
 };
-
-#endif /* _UPNPDIR_HXX_INCLUDED_ */

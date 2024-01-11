@@ -3,17 +3,9 @@ from os.path import abspath
 
 from build.project import Project
 from build.zlib import ZlibProject
-from build.meson import MesonProject
 from build.cmake import CmakeProject
 from build.autotools import AutotoolsProject
 from build.ffmpeg import FfmpegProject
-from build.openssl import OpenSSLProject
-
-libmpdclient = MesonProject(
-    'https://www.musicpd.org/download/libmpdclient/2/libmpdclient-2.20.tar.xz',
-    '18793f68e939c3301e34d8fcadea1f7daa24143941263cecadb80126194e277d',
-    'lib/libmpdclient.a',
-)
 
 libsamplerate = CmakeProject(
     'https://github.com/libsndfile/libsamplerate/releases/download/0.2.2/libsamplerate-0.2.2.tar.xz',
@@ -26,92 +18,11 @@ libsamplerate = CmakeProject(
     ],
 )
 
-libogg = CmakeProject(
-    'http://downloads.xiph.org/releases/ogg/libogg-1.3.5.tar.xz',
-    'c4d91be36fc8e54deae7575241e03f4211eb102afb3fc0775fbbc1b740016705',
-    'lib/libogg.a',
-    [
-        '-DBUILD_SHARED_LIBS=OFF',
-        '-DINSTALL_DOCS=OFF',
-        '-DINSTALL_CMAKE_PACKAGE_MODULE=OFF',
-    ],
-)
-
-opus = AutotoolsProject(
-    'https://downloads.xiph.org/releases/opus/opus-1.4.tar.gz',
-    'c9b32b4253be5ae63d1ff16eea06b94b5f0f2951b7a02aceef58e3a3ce49c51f',
-    'lib/libopus.a',
-    [
-        '--disable-shared', '--enable-static',
-        '--disable-doc',
-        '--disable-extra-programs',
-    ],
-
-    # suppress "visibility default" from opus_defines.h
-    cppflags='-DOPUS_EXPORT=',
-)
-
-flac = AutotoolsProject(
-    'http://downloads.xiph.org/releases/flac/flac-1.4.3.tar.xz',
-    '6c58e69cd22348f441b861092b825e591d0b822e106de6eb0ee4d05d27205b70',
-    'lib/libFLAC.a',
-    [
-        '--disable-shared', '--enable-static',
-        '--disable-stack-smash-protection',
-        '--disable-xmms-plugin', '--disable-cpplibs',
-        '--disable-doxygen-docs',
-        '--disable-programs',
-    ],
-    subdirs=['include', 'src/libFLAC'],
-)
-
 zlib = ZlibProject(
     ('http://zlib.net/zlib-1.3.tar.xz',
      'https://github.com/madler/zlib/releases/download/v1.3/zlib-1.3.tar.xz'),
     '8a9ba2898e1d0d774eca6ba5b4627a11e5588ba85c8851336eb38de4683050a7',
     'lib/libz.a',
-)
-
-libid3tag = AutotoolsProject(
-    'ftp://ftp.mars.org/pub/mpeg/libid3tag-0.15.1b.tar.gz',
-    'e5808ad997ba32c498803822078748c3',
-    'lib/libid3tag.a',
-    [
-        '--disable-shared', '--enable-static',
-
-        # without this, libid3tag's configure.ac ignores -O* and -f*
-        '--disable-debugging',
-    ],
-    autogen=True,
-
-    edits={
-        # fix bug in libid3tag's configure.ac which discards all but the last optimization flag
-        'configure.ac': lambda data: re.sub(r'optimize="\$1"', r'optimize="$optimize $1"', data, count=1),
-    }
-)
-
-libmad = AutotoolsProject(
-    'ftp://ftp.mars.org/pub/mpeg/libmad-0.15.1b.tar.gz',
-    '1be543bc30c56fb6bea1d7bf6a64e66c',
-    'lib/libmad.a',
-    [
-        '--disable-shared', '--enable-static',
-
-        # without this, libmad's configure.ac ignores -O* and -f*
-        '--disable-debugging',
-    ],
-    autogen=True,
-)
-
-liblame = AutotoolsProject(
-    'http://downloads.sourceforge.net/project/lame/lame/3.100/lame-3.100.tar.gz',
-    'ddfe36cab873794038ae2c1210557ad34857a4b6bdc515785d1da9e175b1da1e',
-    'lib/libmp3lame.a',
-    [
-        '--disable-shared', '--enable-static',
-        '--disable-gtktest', '--disable-analyzer-hooks',
-        '--disable-decoder', '--disable-frontend',
-    ],
 )
 
 libmodplug = AutotoolsProject(
@@ -125,8 +36,8 @@ libmodplug = AutotoolsProject(
 )
 
 libopenmpt = AutotoolsProject(
-    'https://lib.openmpt.org/files/libopenmpt/src/libopenmpt-0.6.6+release.autotools.tar.gz',
-    '6ddb9e26a430620944891796fefb1bbb38bd9148f6cfc558810c0d3f269876c7',
+    'https://lib.openmpt.org/files/libopenmpt/src/libopenmpt-0.7.3+release.autotools.tar.gz',
+    '2cf8369b7916b09264f3f14b9fb6cef35a6e9bee0328dec4f49d98211ccfd722',
     'lib/libopenmpt.a',
     [
         '--disable-shared', '--enable-static',
@@ -165,8 +76,8 @@ gme = CmakeProject(
 )
 
 ffmpeg = FfmpegProject(
-    'http://ffmpeg.org/releases/ffmpeg-6.0.tar.xz',
-    '57be87c22d9b49c112b6d24bc67d42508660e6b718b3db89c44e47e289137082',
+    'http://ffmpeg.org/releases/ffmpeg-6.1.tar.xz',
+    '488c76e57dd9b3bee901f71d5c95eaf1db4a5a31fe46a28654e837144207c270',
     'lib/libavcodec.a',
     [
         '--disable-shared', '--enable-static',
@@ -473,6 +384,8 @@ ffmpeg = FfmpegProject(
         '--disable-decoder=pam',
         '--disable-decoder=pbm',
         '--disable-decoder=pcx',
+        '--disable-decoder=pdv',
+        '--disable-decoder=pfm',
         '--disable-decoder=pgm',
         '--disable-decoder=pgmyuv',
         '--disable-decoder=pgssub',
@@ -606,48 +519,6 @@ ffmpeg = FfmpegProject(
         '--disable-bsf=vp9_superframe',
         '--disable-bsf=vp9_superframe_split',
     ],
-)
-
-openssl = OpenSSLProject(
-    ('https://www.openssl.org/source/openssl-3.1.3.tar.gz',
-     'https://artfiles.org/openssl.org/source/openssl-3.1.3.tar.gz'),
-    'f0316a2ebd89e7f2352976445458689f80302093788c466692fb2a188b2eacf6',
-    'include/openssl/ossl_typ.h',
-)
-
-curl = CmakeProject(
-    ('https://curl.se/download/curl-8.2.1.tar.xz',
-     'https://github.com/curl/curl/releases/download/curl-8_2_1/curl-8.2.1.tar.xz'),
-    'dd322f6bd0a20e6cebdfd388f69e98c3d183bed792cf4713c8a7ef498cba4894',
-    'lib/libcurl.a',
-    [
-        '-DBUILD_CURL_EXE=OFF',
-        '-DBUILD_SHARED_LIBS=OFF',
-        '-DCURL_DISABLE_LDAP=ON',
-        '-DCURL_DISABLE_TELNET=ON',
-        '-DCURL_DISABLE_DICT=ON',
-        '-DCURL_DISABLE_FILE=ON',
-        '-DCURL_DISABLE_FTP=ON',
-        '-DCURL_DISABLE_TFTP=ON',
-        '-DCURL_DISABLE_LDAPS=ON',
-        '-DCURL_DISABLE_RTSP=ON',
-        '-DCURL_DISABLE_PROXY=ON',
-        '-DCURL_DISABLE_POP3=ON',
-        '-DCURL_DISABLE_IMAP=ON',
-        '-DCURL_DISABLE_SMTP=ON',
-        '-DCURL_DISABLE_GOPHER=ON',
-        '-DCURL_DISABLE_COOKIES=ON',
-        '-DCURL_DISABLE_CRYPTO_AUTH=ON',
-        '-DCURL_DISABLE_ALTSVC=ON',
-        '-DCMAKE_USE_LIBSSH2=OFF',
-        '-DCURL_WINDOWS_SSPI=OFF',
-        '-DCURL_DISABLE_NTLM=ON',
-        '-DBUILD_TESTING=OFF',
-    ],
-    windows_configure_args=[
-        '-DCURL_USE_SCHANNEL=ON',
-    ],
-    patches='src/lib/curl/patches',
 )
 
 libnfs = AutotoolsProject(

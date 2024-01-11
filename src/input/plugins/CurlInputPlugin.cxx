@@ -20,7 +20,7 @@
 #include "event/Call.hxx"
 #include "event/Loop.hxx"
 #include "util/ASCII.hxx"
-#include "util/NumberParser.hxx"
+#include "util/CNumberParser.hxx"
 #include "util/Domain.hxx"
 #include "Log.hxx"
 #include "PluginUnavailable.hxx"
@@ -456,9 +456,14 @@ CurlInputStream::~CurlInputStream() noexcept
 }
 
 static CurlEasy
-CreateEasy(const char *url)
+CreateEasy(const char *url, struct curl_slist *headers)
 {
 	CurlEasy easy{url};
+
+	/* increase CURL's receive buffer size from 16 kB to 512 kB
+	   (the maximum until CURL 7.88.0) to reduce system call
+	   overhead */
+	easy.TrySetOption(CURLOPT_BUFFERSIZE, 512L * 1024L);
 
 	easy.SetOption(CURLOPT_HTTP200ALIASES, http_200_aliases);
 	easy.SetOption(CURLOPT_FOLLOWLOCATION, 1L);
@@ -503,14 +508,17 @@ CreateEasy(const char *url)
 	easy.SetOption(CURLOPT_TCP_KEEPIDLE, tcp_keepidle);
 	easy.SetOption(CURLOPT_TCP_KEEPINTVL, tcp_keepintvl);
 
+	easy.SetRequestHeaders(headers);
+
 	return easy;
 }
 
 void
 CurlInputStream::InitEasy()
 {
-	request = new CurlRequest(**curl_init, CreateEasy(GetURI()), *this);
-	request->SetRequestHeaders(request_headers.Get());
+	request = new CurlRequest(**curl_init,
+				  CreateEasy(GetURI(), request_headers.Get()),
+				  *this);
 }
 
 void
@@ -540,8 +548,8 @@ CurlInputStream::SeekInternal(offset_type new_offset)
 	/* send the "Range" header */
 
 	if (offset > 0)
-		request->SetOption(CURLOPT_RANGE,
-				   fmt::format_int{offset}.c_str());
+		request->GetEasy().SetOption(CURLOPT_RANGE,
+					     fmt::format_int{offset}.c_str());
 
 	StartRequest();
 }

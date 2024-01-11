@@ -12,19 +12,81 @@ project(
 
     # If we build those libraries as Meson subproject, they shall be
     # linked statically into the MPD executable.
+    'curl:default_library=static',
     'expat:default_library=static',
+    'flac:default_library=static',
     'fmt:default_library=static',
     'gtest:default_library=static',
+    'id3tag:default_library=static',
+    'lame:default_library=static',
+    'libmpdclient:default_library=static',
+    'liburing:default_library=static',
+    'ogg:default_library=static',
+    'openssl:default_library=static',
+    'opus:default_library=static',
     'sqlite3:default_library=static',
     'vorbis:default_library=static',
 
     # Not interested in compiler warnings from subprojects.
+    'curl:werror=false',
+    'curl:warning_level=0',
     'expat:werror=false',
     'expat:warning_level=0',
+    'flac:werror=false',
+    'flac:warning_level=0',
     'fmt:warning_level=0',
     'gtest:warning_level=0',
+    'id3tag:werror=false',
+    'id3tag:warning_level=0',
+    'lame:werror=false',
+    'lame:warning_level=0',
+    'liburing:warning_level=0',
     'sqlite3:warning_level=0',
+    'oggiopus:werror=false',
+    'ogg:warning_level=0',
+    'openssl:werror=false',
+    'openssl:warning_level=0',
+    'opus:werror=false',
+    'opus:warning_level=0',
     'vorbis:warning_level=0',
+
+    # Disable subprojects features we don't need
+    'curl:tool=disabled',
+    'curl:tests=disabled',
+    'curl:unittests=disabled',
+    'curl:brotli=disabled',
+    'curl:cookies=disabled',
+    'curl:progress-meter=disabled',
+    'curl:zstd=disabled',
+    'curl:kerberos-auth=disabled',
+    'curl:negotiate-auth=disabled',
+    'curl:gss-api=disabled',
+    'curl:ntlm=disabled',
+    'curl:ssh=disabled',
+    'curl:dict=disabled',
+    'curl:file=disabled',
+    'curl:ftp=disabled',
+    'curl:gopher=disabled',
+    'curl:imap=disabled',
+    'curl:ldap=disabled',
+    'curl:ldaps=disabled',
+    'curl:mqtt=disabled',
+    'curl:pop3=disabled',
+    'curl:rtmp=disabled',
+    'curl:rtsp=disabled',
+    'curl:smb=disabled',
+    'curl:smtp=disabled',
+    'curl:telnet=disabled',
+    'curl:tftp=disabled',
+    'lame:decoder=false',
+    'lame:tools=disabled',
+    'libmpdclient:documentation=false',
+    'libmpdclient:test=false',
+    'openssl:build_cli=false',
+    'openssl:asm=disabled', # work around "call to undeclared function "asm" on Android
+    'opus:docs=disabled',
+    'opus:extra-programs=disabled',
+    'opus:tests=disabled',
   ],
   license: 'GPLv2+',
 )
@@ -50,8 +112,11 @@ configure_file(output: 'Version.h', configuration: version_conf)
 conf = configuration_data()
 conf.set_quoted('SYSTEM_CONFIG_FILE_LOCATION', join_paths(get_option('prefix'), get_option('sysconfdir'), 'mpd.conf'))
 
-common_cppflags = [
+common_global_cppflags = [
   '-D_GNU_SOURCE',
+]
+
+common_cppflags = [
 ]
 
 test_global_common_flags = [
@@ -200,8 +265,11 @@ if is_android
   subdir('android')
 endif
 
-add_global_arguments(common_cppflags, language: 'c')
-add_global_arguments(common_cppflags, language: 'cpp')
+add_global_arguments(common_global_cppflags, language: 'c')
+add_global_arguments(common_global_cppflags, language: 'cpp')
+
+add_project_arguments(common_cppflags, language: 'c')
+add_project_arguments(common_cppflags, language: 'cpp')
 
 enable_daemon = not is_windows and not is_android and get_option('daemon')
 conf.set('ENABLE_DAEMON', enable_daemon)
@@ -401,6 +469,9 @@ subdir('src/win32')
 
 subdir('src/apple')
 
+subdir('src/fs/glue')
+
+subdir('src/config')
 subdir('src/pcm')
 
 subdir('src/lib/dbus')
@@ -428,9 +499,6 @@ subdir('src/lib/crypto')
 
 subdir('src/zeroconf')
 
-subdir('src/fs/io')
-subdir('src/fs/glue')
-subdir('src/config')
 subdir('src/tag')
 subdir('src/neighbor')
 subdir('src/input')
@@ -516,7 +584,7 @@ if is_android
     '-lz',
   ]
   more_deps += [
-    declare_dependency(sources: [classes_jar]),
+    declare_dependency(sources: [bridge_header]),
     java_dep,
   ]
 else
