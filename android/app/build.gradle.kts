@@ -1,6 +1,8 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("com.google.devtools.ksp")
+    id("com.google.dagger.hilt.android")
 }
 
 android {
@@ -24,7 +26,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.4"
+        kotlinCompilerExtensionVersion = "1.5.7"
     }
 
     buildTypes {
@@ -59,10 +61,17 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.2")
+    implementation("androidx.navigation:navigation-compose:2.7.6")
 
     implementation("com.github.alorma:compose-settings-ui-m3:1.0.3")
     implementation("com.github.alorma:compose-settings-storage-preferences:1.0.3")
     implementation("com.google.accompanist:accompanist-permissions:0.33.2-alpha")
+
+    implementation("com.google.dagger:hilt-android:2.49")
+    ksp("com.google.dagger:dagger-compiler:2.49")
+    ksp("com.google.dagger:hilt-compiler:2.49")
+
+    implementation("androidx.media3:media3-session:1.2.0")
 
     // Android Studio Preview support
     implementation("androidx.compose.ui:ui-tooling-preview")

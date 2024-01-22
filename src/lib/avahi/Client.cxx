@@ -30,11 +30,15 @@ void
 Client::Close() noexcept
 {
 	if (client != nullptr) {
+		connected = false;
+
 		for (auto *l : listeners)
 			l->OnAvahiDisconnect();
 
 		avahi_client_free(client);
 		client = nullptr;
+	} else {
+		assert(!connected);
 	}
 
 	reconnect_timer.Cancel();
@@ -43,22 +47,24 @@ Client::Close() noexcept
 void
 Client::ClientCallback(AvahiClient *c, AvahiClientState state) noexcept
 {
-	int error;
-
 	switch (state) {
 	case AVAHI_CLIENT_S_RUNNING:
+		connected = true;
+
 		for (auto *l : listeners)
 			l->OnAvahiConnect(c);
 
 		break;
 
 	case AVAHI_CLIENT_FAILURE:
-		error = avahi_client_errno(c);
-		if (error == AVAHI_ERR_DISCONNECTED) {
+		if (int error = avahi_client_errno(c);
+		    error == AVAHI_ERR_DISCONNECTED) {
 			Close();
 
 			reconnect_timer.Schedule(std::chrono::seconds(10));
 		} else {
+			Close();
+
 			if (!error_handler.OnAvahiError(std::make_exception_ptr(MakeError(error,
 											  "Avahi connection error"))))
 				return;
@@ -73,12 +79,15 @@ Client::ClientCallback(AvahiClient *c, AvahiClientState state) noexcept
 
 	case AVAHI_CLIENT_S_COLLISION:
 	case AVAHI_CLIENT_S_REGISTERING:
+		assert(!connected);
+
 		for (auto *l : listeners)
 			l->OnAvahiChanged();
 
 		break;
 
 	case AVAHI_CLIENT_CONNECTING:
+		assert(!connected);
 		break;
 	}
 }
@@ -94,6 +103,9 @@ Client::ClientCallback(AvahiClient *c, AvahiClientState state,
 void
 Client::OnReconnectTimer() noexcept
 {
+	assert(client == nullptr);
+	assert(!connected);
+
 	int error;
 	client = avahi_client_new(&poll, AVAHI_CLIENT_NO_FAIL,
 				  ClientCallback, this,

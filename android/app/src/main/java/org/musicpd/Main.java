@@ -3,7 +3,6 @@
 
 package org.musicpd;
 
-import android.annotation.TargetApi;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -17,19 +16,26 @@ import android.content.ServiceConnection;
 import android.media.AudioManager;
 import android.os.Build;
 import android.os.IBinder;
+import android.os.Looper;
 import android.os.PowerManager;
 import android.os.RemoteCallbackList;
 import android.os.RemoteException;
 import android.util.Log;
-import android.widget.RemoteViews;
 
-import androidx.core.app.ServiceCompat;
+import androidx.annotation.OptIn;
+import androidx.media3.common.util.UnstableApi;
+import androidx.media3.session.MediaSession;
 
-import org.musicpd.ui.SettingsActivity;
+import org.musicpd.data.LoggingRepository;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 
+import javax.inject.Inject;
+
+import dagger.hilt.android.AndroidEntryPoint;
+
+@AndroidEntryPoint
 public class Main extends Service implements Runnable {
 	private static final String TAG = "Main";
 	private static final String WAKELOCK_TAG = "mpd:wakelockmain";
@@ -39,7 +45,6 @@ public class Main extends Service implements Runnable {
 	private static final int MAIN_STATUS_STARTED = 1;
 
 	private static final int MSG_SEND_STATUS = 0;
-	private static final int MSG_SEND_LOG = 1;
 
 	private Thread mThread = null;
 	private int mStatus = MAIN_STATUS_STOPPED;
@@ -49,6 +54,11 @@ public class Main extends Service implements Runnable {
 	private final IBinder mBinder = new MainStub(this);
 	private boolean mPauseOnHeadphonesDisconnect = false;
 	private PowerManager.WakeLock mWakelock = null;
+
+	private MediaSession mMediaSession = null;
+
+	@Inject
+	LoggingRepository logging;
 
 	static class MainStub extends IMain.Stub {
 		private Main mService;
@@ -98,9 +108,6 @@ public class Main extends Service implements Runnable {
 						break;
 					}
 					break;
-				case MSG_SEND_LOG:
-					cb.onLog(arg1, (String) obj);
-					break;
 				}
 			} catch (RemoteException e) {
 			}
@@ -111,7 +118,7 @@ public class Main extends Service implements Runnable {
 	private Bridge.LogListener mLogListener = new Bridge.LogListener() {
 		@Override
 		public void onLog(int priority, String msg) {
-			sendMessage(MSG_SEND_LOG, priority, 0, msg);
+			logging.addLogItem(priority, msg);
 		}
 	};
 
@@ -183,6 +190,7 @@ public class Main extends Service implements Runnable {
 		}
 	}
 
+	@OptIn(markerClass = UnstableApi.class)
 	private void start() {
 		if (mThread != null)
 			return;
@@ -199,7 +207,7 @@ public class Main extends Service implements Runnable {
 			}
 		}, filter);
 
-		final Intent mainIntent = new Intent(this, SettingsActivity.class);
+		final Intent mainIntent = new Intent(this, MainActivity.class);
 		mainIntent.setAction("android.intent.action.MAIN");
 		mainIntent.addCategory("android.intent.category.LAUNCHER");
 		final PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
@@ -224,11 +232,16 @@ public class Main extends Service implements Runnable {
 		mThread = new Thread(this);
 		mThread.start();
 
+		MPDPlayer player = new MPDPlayer(Looper.getMainLooper());
+		mMediaSession = new MediaSession.Builder(this, player).build();
+
 		startForeground(R.string.notification_title_mpd_running, notification);
 		startService(new Intent(this, Main.class));
 	}
 
 	private void stop() {
+		mMediaSession.release();
+		mMediaSession = null;
 		if (mThread != null) {
 			if (mThread.isAlive()) {
 				synchronized (this) {
@@ -303,7 +316,6 @@ public class Main extends Service implements Runnable {
 			public void onStarted();
 			public void onStopped();
 			public void onError(String error);
-			public void onLog(int priority, String msg);
 		}
 
 		private boolean mBound = false;
@@ -326,11 +338,6 @@ public class Main extends Service implements Runnable {
 			@Override
 			public void onError(String error) throws RemoteException {
 				mCallback.onError(error);
-			}
-
-			@Override
-			public void onLog(int priority, String msg) throws RemoteException {
-				mCallback.onLog(priority, msg);
 			}
 		};
 
