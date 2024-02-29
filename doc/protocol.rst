@@ -447,7 +447,8 @@ Querying :program:`MPD`'s status
     - ``partition``: a partition was added, removed or changed
     - ``sticker``: the sticker database has been modified.
     - ``subscription``: a client has subscribed or unsubscribed to a channel
-    - ``message``: a message was received on a channel this client is subscribed to; this event is only emitted when the queue is empty
+    - ``message``: a message was received on a channel this client is subscribed to;
+      this event is only emitted when the client's message queue is empty
     - ``neighbor``: a neighbor was found or lost
     - ``mount``: the mount list has changed
 
@@ -1764,7 +1765,8 @@ Client to client
 Clients can communicate with each others over "channels".  A
 channel is created by a client subscribing to it.  More than
 one client can be subscribed to a channel at a time; all of
-them will receive the messages which get sent to it.
+them will receive the messages which get sent to it.  A client
+can be subscribed to up to 16 channels simultaneously.
 
 Each time a client subscribes or unsubscribes, the global idle
 event ``subscription`` is generated.  In
