@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 // author: Max Kellermann <max.kellermann@gmail.com>
 
-#ifndef CHAR_UTIL_HXX
-#define CHAR_UTIL_HXX
+#pragma once
 
 #ifdef _UNICODE
 #include "WCharUtil.hxx"
@@ -134,11 +133,15 @@ ToLowerASCII(char ch) noexcept
 }
 
 constexpr bool
-IsHexDigit(char ch) noexcept
+IsLowerHexDigit(char ch) noexcept
 {
 	return IsDigitASCII(ch) ||
-		(ch >= 'a' && ch <= 'f') ||
-		(ch >= 'A' && ch <= 'F');
+		(ch >= 'a' && ch <= 'f');
 }
 
-#endif
+constexpr bool
+IsHexDigit(char ch) noexcept
+{
+	return IsLowerHexDigit(ch) ||
+		(ch >= 'A' && ch <= 'F');
+}

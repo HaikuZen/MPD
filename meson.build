@@ -10,6 +10,8 @@ project(
     'build.cpp_std=c++2a',
     'warning_level=3',
 
+    'fmt:cpp_std=c++2a',
+
     # If we build those libraries as Meson subproject, they shall be
     # linked statically into the MPD executable.
     'curl:default_library=static',
@@ -141,6 +143,9 @@ test_common_flags = [
 
   # suppress bogus GCC12 warnings in libfmt headers
   '-Wno-stringop-overflow',
+
+  # libfmt causes this warning due to -ffast-math
+  '-Wno-nan-infinity-disabled',
 ]
 
 test_global_cxxflags = test_global_common_flags + [
