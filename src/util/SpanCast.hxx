@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <span>
 #include <string_view>
+#include <type_traits>
 
 /**
  * Cast a std::span<std::byte> to a std::span<T>, rounding down to the
@@ -89,15 +90,20 @@ ToStringView(std::span<const std::byte> s) noexcept
 }
 
 template<typename T>
-constexpr std::basic_string_view<T>
-ToStringView(std::span<const T> s) noexcept
+constexpr std::basic_string_view<std::remove_const_t<T>>
+ToStringView(std::span<T> s) noexcept
 {
 	return {s.data(), s.size()};
 }
 
+/* this overload matches std::span<std::byte> (without "const") and is
+   written that way to avoid ambiguities when passing an object that
+   has cast operators for both std::span<std::byte> and
+   std::span<const std::byte> */
 template<typename T>
-constexpr std::basic_string_view<T>
+constexpr std::string_view
 ToStringView(std::span<T> s) noexcept
+	requires(std::is_same_v<std::remove_const_t<T>, std::byte>)
 {
-	return {s.data(), s.size()};
+	return ToStringView(FromBytesStrict<const char>(s));
 }

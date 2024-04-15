@@ -31,6 +31,8 @@ ver 0.24 (not yet released)
   - ffmpeg: require FFmpeg 4.0 or later
   - ffmpeg: query supported demuxers at runtime
   - hybrid_dsd: remove
+  - mpg123: prefer over "mad"
+  - mpg123: support streaming
   - opus: implement bitrate calculation
   - sidplay: require libsidplayfp (drop support for the original sidplay)
   - wavpack: require libwavpack version 5
@@ -1008,7 +1010,7 @@ ver 0.20.10 (2017/08/24)
 * decoder
   - ffmpeg: support MusicBrainz ID3v2 tags
 * tags
-  - aiff: fix FORM chunk size endianess (is big-endian)
+  - aiff: fix FORM chunk size endianness (is big-endian)
 * mixer
   - osx: add a mixer for OSX.
 * fix crash when resuming playback before decoder is ready

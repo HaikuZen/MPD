@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Copyright The Music Player Daemon Project
 
-#ifndef MPD_OUTPUT_HTTPD_CLIENT_HXX
-#define MPD_OUTPUT_HTTPD_CLIENT_HXX
+#pragma once
 
 #include "Page.hxx"
 #include "event/BufferedSocket.hxx"
@@ -11,6 +10,7 @@
 #include <cstddef>
 #include <list>
 #include <queue>
+#include <string_view>
 
 class UniqueSocketDescriptor;
 class HttpdOutput;
@@ -93,14 +93,14 @@ class HttpdClient final
 	/**
 	 * The amount of streaming data between each metadata block
 	 */
-	unsigned metaint = 8192; /*TODO: just a std value */
+	static constexpr std::size_t metaint = 8192;
 
 	/**
 	 * The metadata as #Page which is currently being sent to the client.
 	 */
 	PagePtr metadata;
 
-	/*
+	/**
 	 * The amount of bytes which were already sent from the metadata.
 	 */
 	size_t metadata_current_position = 0;
@@ -143,7 +143,7 @@ public:
 	/**
 	 * Handle a line of the HTTP request.
 	 */
-	bool HandleLine(const char *line) noexcept;
+	bool HandleLine(std::string_view line) noexcept;
 
 	/**
 	 * Switch the client to #State::RESPONSE.
@@ -181,9 +181,7 @@ protected:
 	/* virtual methods from class BufferedSocket */
 	void OnSocketReady(unsigned flags) noexcept override;
 
-	InputResult OnSocketInput(void *data, size_t length) noexcept override;
+	InputResult OnSocketInput(std::span<std::byte> src) noexcept override;
 	void OnSocketError(std::exception_ptr ep) noexcept override;
 	void OnSocketClosed() noexcept override;
 };
-
-#endif
