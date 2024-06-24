@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Copyright The Music Player Daemon Project
 
-#ifndef MPD_ASYNC_INPUT_STREAM_HXX
-#define MPD_ASYNC_INPUT_STREAM_HXX
+#pragma once
 
 #include "InputStream.hxx"
 #include "event/InjectEvent.hxx"
@@ -54,7 +53,7 @@ protected:
 	std::exception_ptr postponed_exception;
 
 public:
-	AsyncInputStream(EventLoop &event_loop, const char *_url,
+	AsyncInputStream(EventLoop &event_loop, std::string_view _url,
 			 Mutex &_mutex,
 			 size_t _buffer_size,
 			 size_t _resume_at) noexcept;
@@ -73,7 +72,7 @@ public:
 	std::unique_ptr<Tag> ReadTag() noexcept final;
 	bool IsAvailable() const noexcept final;
 	size_t Read(std::unique_lock<Mutex> &lock,
-		    void *ptr, size_t read_size) final;
+		    std::span<std::byte> dest) final;
 
 protected:
 	/**
@@ -155,5 +154,3 @@ private:
 	void DeferredResume() noexcept;
 	void DeferredSeek() noexcept;
 };
-
-#endif

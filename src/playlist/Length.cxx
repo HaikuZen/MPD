@@ -10,10 +10,12 @@
 #include "SongPrint.hxx"
 #include "song/DetachedSong.hxx"
 #include "song/LightSong.hxx"
+#include "input/Error.hxx"
 #include "fs/Traits.hxx"
 #include "thread/Mutex.hxx"
 #include "Partition.hxx"
 #include "Instance.hxx"
+#include "PlaylistError.hxx"
 
 #include <fmt/format.h>
 
@@ -45,11 +47,11 @@ playlist_provider_length(Response &r,
 	r.Fmt(FMT_STRING("playtime: {}\n"), playtime.RoundS());
 }
 
-bool
+void
 playlist_file_length(Response &r, Partition &partition,
-		    const SongLoader &loader,
-		    const LocatedUri &uri)
-{
+		     const SongLoader &loader,
+		     const LocatedUri &uri)
+try {
 	Mutex mutex;
 
 #ifndef ENABLE_DATABASE
@@ -62,8 +64,12 @@ playlist_file_length(Response &r, Partition &partition,
 #endif
 					  mutex);
 	if (playlist == nullptr)
-		return false;
+		throw PlaylistError::NoSuchList();
 
 	playlist_provider_length(r, loader, uri.canonical_uri, *playlist);
-	return true;
+} catch (...) {
+	if (IsFileNotFound(std::current_exception()))
+		throw PlaylistError::NoSuchList();
+
+	throw;
 }

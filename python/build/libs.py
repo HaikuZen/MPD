@@ -53,8 +53,8 @@ libopenmpt = AutotoolsProject(
 )
 
 wildmidi = CmakeProject(
-    'https://github.com/Mindwerks/wildmidi/releases/download/wildmidi-0.4.5/wildmidi-0.4.5.tar.gz',
-    'd5e7bef00a7aa47534a53d43b1265f8d3d27f6a28e7f563c1cdf02ff4fa35b99',
+    'https://github.com/Mindwerks/wildmidi/releases/download/wildmidi-0.4.6/wildmidi-0.4.6.tar.gz',
+    '24ca992639ce76efa3737029fceb3672385d56e2ac0a15d50b40cc12d26e60de',
     'lib/libWildMidi.a',
     [
         '-DBUILD_SHARED_LIBS=OFF',
@@ -76,8 +76,8 @@ gme = CmakeProject(
 )
 
 ffmpeg = FfmpegProject(
-    'http://ffmpeg.org/releases/ffmpeg-6.1.1.tar.xz',
-    '8684f4b00f94b85461884c3719382f1261f0d9eb3d59640a1f4ac0873616f968',
+    'http://ffmpeg.org/releases/ffmpeg-7.0.tar.xz',
+    '4426a94dd2c814945456600c8adfc402bee65ec14a70e8c531ec9a2cd651da7b',
     'lib/libavcodec.a',
     [
         '--disable-shared', '--enable-static',
@@ -342,6 +342,7 @@ ffmpeg = FfmpegProject(
         '--disable-decoder=kgv1',
         '--disable-decoder=kmvc',
         '--disable-decoder=lagarith',
+        '--disable-decoder=lead',
         '--disable-decoder=loco',
         '--disable-decoder=lscr',
         '--disable-decoder=m101',

@@ -3,9 +3,12 @@
 
 #include "PlaylistMapper.hxx"
 #include "PlaylistFile.hxx"
+#include "PlaylistRegistry.hxx"
 #include "PlaylistStream.hxx"
 #include "SongEnumerator.hxx"
 #include "Mapper.hxx"
+#include "input/InputStream.hxx"
+#include "input/WaitReady.hxx"
 #include "fs/AllocatedPath.hxx"
 #include "storage/StorageInterface.hxx"
 #include "util/UriUtil.hxx"
@@ -33,21 +36,19 @@ playlist_open_in_playlist_dir(const char *uri, Mutex &mutex)
  * Load a playlist from the configured music directory.
  */
 static std::unique_ptr<SongEnumerator>
-playlist_open_in_storage(const char *uri, const Storage *storage, Mutex &mutex)
+playlist_open_in_storage(const char *uri, Storage *storage, Mutex &mutex)
 {
 	assert(uri_safe_local(uri));
 
 	if (storage == nullptr)
 		return nullptr;
 
-	{
-		const auto path = storage->MapFS(uri);
-		if (!path.IsNull())
-			return playlist_open_path(path, mutex);
-	}
+	if (const auto path = storage->MapFS(uri); !path.IsNull())
+		return playlist_open_path(path, mutex);
 
-	const auto uri2 = storage->MapUTF8(uri);
-	return playlist_open_remote(uri2.c_str(), mutex);
+	auto is = storage->OpenFile(uri, mutex);
+	LockWaitReady(*is);
+	return playlist_list_open_stream(std::move(is), uri);
 }
 
 #endif
@@ -55,14 +56,22 @@ playlist_open_in_storage(const char *uri, const Storage *storage, Mutex &mutex)
 std::unique_ptr<SongEnumerator>
 playlist_mapper_open(const char *uri,
 #ifdef ENABLE_DATABASE
-		     const Storage *storage,
+		     Storage *storage,
 #endif
 		     Mutex &mutex)
 {
+	std::exception_ptr spl_error;
+
 	if (spl_valid_name(uri)) {
-		auto playlist = playlist_open_in_playlist_dir(uri, mutex);
-		if (playlist != nullptr)
-			return playlist;
+		try {
+			auto playlist = playlist_open_in_playlist_dir(uri, mutex);
+			if (playlist != nullptr)
+				return playlist;
+		} catch (...) {
+			/* postpone this exception, try playlist in
+			   music_directory first */
+			spl_error = std::current_exception();
+		}
 	}
 
 #ifdef ENABLE_DATABASE
@@ -72,6 +81,9 @@ playlist_mapper_open(const char *uri,
 			return playlist;
 	}
 #endif
+
+	if (spl_error)
+		std::rethrow_exception(spl_error);
 
 	return nullptr;
 }

@@ -26,7 +26,7 @@ RemoteTagCache::~RemoteTagCache() noexcept
 void
 RemoteTagCache::Lookup(const std::string &uri) noexcept
 {
-	std::unique_lock<Mutex> lock(mutex);
+	std::unique_lock lock{mutex};
 
 	auto [tag, value] = map.insert_check(uri);
 	if (value) {
@@ -47,7 +47,7 @@ RemoteTagCache::Lookup(const std::string &uri) noexcept
 			item->scanner->Start();
 		} catch (...) {
 			FmtError(remote_tag_cache_domain,
-				 "Failed to scan tags of '{}': {}",
+				 "Failed to scan tags of {:?}: {}",
 				 uri, std::current_exception());
 
 			item->scanner.reset();
@@ -80,7 +80,7 @@ RemoteTagCache::ItemResolved(Item &item) noexcept
 void
 RemoteTagCache::InvokeHandlers() noexcept
 {
-	const std::scoped_lock<Mutex> lock(mutex);
+	const std::scoped_lock lock{mutex};
 
 	while (!invoke_list.empty()) {
 		auto &item = invoke_list.pop_front();
@@ -105,7 +105,7 @@ RemoteTagCache::Item::OnRemoteTag(Tag &&_tag) noexcept
 
 	scanner.reset();
 
-	const std::scoped_lock<Mutex> lock(parent.mutex);
+	const std::scoped_lock lock{parent.mutex};
 	parent.ItemResolved(*this);
 }
 
@@ -113,10 +113,10 @@ void
 RemoteTagCache::Item::OnRemoteTagError(std::exception_ptr e) noexcept
 {
 	FmtError(remote_tag_cache_domain,
-		 "Failed to scan tags of '{}': {}", uri, e);
+		 "Failed to scan tags of {:?}: {}", uri, e);
 
 	scanner.reset();
 
-	const std::scoped_lock<Mutex> lock(parent.mutex);
+	const std::scoped_lock lock{parent.mutex};
 	parent.ItemResolved(*this);
 }

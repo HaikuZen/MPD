@@ -11,6 +11,8 @@
 #include "lib/nfs/Lease.hxx"
 #include "lib/nfs/Connection.hxx"
 #include "lib/nfs/Glue.hxx"
+#include "input/InputStream.hxx"
+#include "input/plugins/NfsInputPlugin.hxx"
 #include "fs/AllocatedPath.hxx"
 #include "thread/Mutex.hxx"
 #include "thread/Cond.hxx"
@@ -26,11 +28,15 @@ extern "C" {
 #include <nfsc/libnfs-raw-nfs.h>
 }
 
+#include <fmt/core.h>
+
 #include <cassert>
 #include <string>
 
 #include <sys/stat.h>
 #include <fcntl.h>
+
+using std::string_view_literals::operator""sv;
 
 class NfsStorage final
 	: public Storage, NfsLease {
@@ -39,9 +45,16 @@ class NfsStorage final
 		INITIAL, CONNECTING, READY, DELAY,
 	};
 
-	const std::string base;
+	/**
+	 * The full configured URL (with all arguemnts).  This is used
+	 * to reconnect.
+	 */
+	const std::string url;
 
-	const std::string server, export_name;
+	/**
+	 * The base URL for building file URLs (without arguments).
+	 */
+	const std::string base;
 
 	NfsConnection *connection;
 
@@ -50,18 +63,20 @@ class NfsStorage final
 
 	Mutex mutex;
 	Cond cond;
-	State state = State::INITIAL;
+	State state = State::CONNECTING;
 	std::exception_ptr last_exception;
 
 public:
-	NfsStorage(EventLoop &_loop, const char *_base,
-		   std::string &&_server, std::string &&_export_name)
-		:base(_base),
-		 server(std::move(_server)),
-		 export_name(std::move(_export_name)),
-		 defer_connect(_loop, BIND_THIS_METHOD(OnDeferredConnect)),
-		 reconnect_timer(_loop, BIND_THIS_METHOD(OnReconnectTimer)) {
-		nfs_init(_loop);
+	NfsStorage(const char *_url, NfsConnection &_connection)
+		:url(_url),
+		 base(fmt::format("nfs://{}{}"sv, _connection.GetServer(), _connection.GetExportName())),
+		 connection(&_connection),
+		 defer_connect(_connection.GetEventLoop(), BIND_THIS_METHOD(OnDeferredConnect)),
+		 reconnect_timer(_connection.GetEventLoop(), BIND_THIS_METHOD(OnReconnectTimer))
+	{
+		BlockingCall(GetEventLoop(), [this](){
+			connection->AddLease(*this);
+		});
 	}
 
 	~NfsStorage() override {
@@ -80,6 +95,8 @@ public:
 	[[nodiscard]] std::string MapUTF8(std::string_view uri_utf8) const noexcept override;
 
 	[[nodiscard]] std::string_view MapToRelativeUTF8(std::string_view uri_utf8) const noexcept override;
+
+	InputStreamPtr OpenFile(std::string_view uri_utf8, Mutex &mutex) override;
 
 	/* virtual methods from NfsLease */
 	void OnNfsConnectionReady() noexcept final {
@@ -123,7 +140,7 @@ private:
 	void SetState(State _state) noexcept {
 		assert(GetEventLoop().IsInside());
 
-		const std::scoped_lock<Mutex> protect(mutex);
+		const std::scoped_lock protect{mutex};
 		state = _state;
 		cond.notify_all();
 	}
@@ -131,7 +148,7 @@ private:
 	void SetState(State _state, std::exception_ptr &&e) noexcept {
 		assert(GetEventLoop().IsInside());
 
-		const std::scoped_lock<Mutex> protect(mutex);
+		const std::scoped_lock protect{mutex};
 		state = _state;
 		last_exception = std::move(e);
 		cond.notify_all();
@@ -141,20 +158,21 @@ private:
 		assert(state != State::READY);
 		assert(GetEventLoop().IsInside());
 
-		connection = &nfs_get_connection(server.c_str(),
-						 export_name.c_str());
+		try {
+			connection = &nfs_make_connection(url.c_str());
+		} catch (...) {
+			SetState(State::DELAY, std::current_exception());
+			reconnect_timer.Schedule(std::chrono::minutes(10));
+			return;
+		}
+
 		connection->AddLease(*this);
 
 		SetState(State::CONNECTING);
 	}
 
-	void EnsureConnected() noexcept {
-		if (state != State::READY)
-			Connect();
-	}
-
 	void WaitConnected() {
-		std::unique_lock<Mutex> lock(mutex);
+		std::unique_lock lock{mutex};
 
 		while (true) {
 			switch (state) {
@@ -230,6 +248,14 @@ std::string_view
 NfsStorage::MapToRelativeUTF8(std::string_view uri_utf8) const noexcept
 {
 	return PathTraitsUTF8::Relative(base, uri_utf8);
+}
+
+InputStreamPtr
+NfsStorage::OpenFile(std::string_view uri_utf8, Mutex &_mutex)
+{
+	WaitConnected();
+
+	return OpenNfsInputStream(*connection, uri_utf8, _mutex);
 }
 
 static void
@@ -393,20 +419,20 @@ NfsStorage::OpenDirectory(std::string_view uri_utf8)
 static std::unique_ptr<Storage>
 CreateNfsStorageURI(EventLoop &event_loop, const char *base)
 {
-	const char *p = StringAfterPrefixCaseASCII(base, "nfs://");
-	if (p == nullptr)
+	if (!StringStartsWithCaseASCII(base, "nfs://"sv))
 		return nullptr;
 
-	const char *mount = std::strchr(p, '/');
-	if (mount == nullptr)
-		throw std::runtime_error("Malformed nfs:// URI");
+	nfs_init(event_loop);
 
-	const std::string server(p, mount);
+	try {
+		auto &connection = nfs_make_connection(base);
+		nfs_set_base(connection.GetServer(), connection.GetExportName());
 
-	nfs_set_base(server.c_str(), mount);
-
-	return std::make_unique<NfsStorage>(event_loop, base,
-					    server.c_str(), mount);
+		return std::make_unique<NfsStorage>(base, connection);
+	} catch (...) {
+		nfs_finish();
+		throw;
+	}
 }
 
 static constexpr const char *nfs_prefixes[] = { "nfs://", nullptr };

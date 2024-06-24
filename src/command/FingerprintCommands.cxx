@@ -51,7 +51,7 @@ protected:
 	}
 
 	void CancelThread() noexcept override {
-		const std::scoped_lock<Mutex> lock(mutex);
+		const std::scoped_lock lock{mutex};
 		cancel = true;
 		cond.notify_one();
 	}
@@ -70,7 +70,7 @@ private:
 	/* virtual methods from class DecoderClient */
 	InputStreamPtr OpenUri(const char *uri) override;
 	size_t Read(InputStream &is,
-		    void *buffer, size_t length) noexcept override;
+		    std::span<std::byte> dest) noexcept override;
 
 	/* virtual methods from class InputStreamHandler */
 	void OnInputStreamReady() noexcept override {
@@ -188,7 +188,7 @@ GetChromaprintCommand::DecodeFile(std::string_view suffix, InputStream &is,
 		return false;
 
 	{
-		const std::scoped_lock<Mutex> protect(mutex);
+		const std::scoped_lock protect{mutex};
 		if (cancel)
 			throw StopDecoder();
 	}
@@ -257,7 +257,7 @@ GetChromaprintCommand::OpenUri(const char *uri2)
 	auto is = InputStream::Open(uri2, mutex);
 	is->SetHandler(this);
 
-	std::unique_lock<Mutex> lock(mutex);
+	std::unique_lock lock{mutex};
 	while (true) {
 		if (cancel)
 			throw StopDecoder();
@@ -274,15 +274,15 @@ GetChromaprintCommand::OpenUri(const char *uri2)
 
 size_t
 GetChromaprintCommand::Read(InputStream &is,
-			    void *buffer, size_t length) noexcept
+			    std::span<std::byte> dest) noexcept
 {
 	/* overriding ChromaprintDecoderClient's implementation to
 	   make it cancellable */
 
-	if (length == 0)
+	if (dest.empty())
 		return 0;
 
-	std::unique_lock<Mutex> lock(mutex);
+	std::unique_lock lock{mutex};
 
 	while (true) {
 		if (cancel)
@@ -295,7 +295,7 @@ GetChromaprintCommand::Read(InputStream &is,
 	}
 
 	try {
-		return is.Read(lock, buffer, length);
+		return is.Read(lock, dest);
 	} catch (...) {
 		ChromaprintDecoderClient::error = std::current_exception();
 		return 0;

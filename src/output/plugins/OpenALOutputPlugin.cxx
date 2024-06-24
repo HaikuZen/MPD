@@ -7,16 +7,8 @@
 
 #include <unistd.h>
 
-#ifndef __APPLE__
 #include <AL/al.h>
 #include <AL/alc.h>
-#else
-#include <OpenAL/al.h>
-#include <OpenAL/alc.h>
-/* on macOS, OpenAL is deprecated, but since the user asked to enable
-   this plugin, let's ignore the compiler warnings */
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
 
 class OpenALOutput final : AudioOutput {
 	/* should be enough for buffer size = 2048 */
@@ -110,13 +102,13 @@ OpenALOutput::SetupContext()
 {
 	device = alcOpenDevice(device_name);
 	if (device == nullptr)
-		throw FmtRuntimeError("Error opening OpenAL device \"{}\"",
+		throw FmtRuntimeError("Error opening OpenAL device {:?}",
 				      device_name);
 
 	context = alcCreateContext(device, nullptr);
 	if (context == nullptr) {
 		alcCloseDevice(device);
-		throw FmtRuntimeError("Error creating context for \"{}\"",
+		throw FmtRuntimeError("Error creating context for {:?}",
 				      device_name);
 	}
 }

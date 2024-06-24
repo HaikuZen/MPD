@@ -99,7 +99,7 @@ public:
 	 */
 	template<typename T>
 	void VisitMounts(T t) const {
-		const std::scoped_lock<Mutex> protect(mutex);
+		const std::scoped_lock protect{mutex};
 		std::string uri;
 		VisitMounts(uri, root, t);
 	}
@@ -109,7 +109,7 @@ public:
 	 */
 	[[gnu::pure]] [[gnu::nonnull]]
 	bool IsMounted(const char *storage_uri) const noexcept {
-		const std::scoped_lock<Mutex> protect(mutex);
+		const std::scoped_lock protect{mutex};
 		return IsMounted(root, storage_uri);
 	}
 
@@ -126,6 +126,8 @@ public:
 	AllocatedPath MapFS(std::string_view uri) const noexcept override;
 
 	std::string_view MapToRelativeUTF8(std::string_view uri) const noexcept override;
+
+	InputStreamPtr OpenFile(std::string_view uri_utf8, Mutex &mutex) override;
 
 private:
 	template<typename T>

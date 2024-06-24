@@ -7,7 +7,10 @@
 #include "Features.hxx"
 
 #include <cassert>
+
+#ifdef HAVE_UN
 #include <string_view>
+#endif
 
 /**
  * An OO wrapper for struct sockaddr_storage.
@@ -100,7 +103,17 @@ public:
 	 * @see SocketAddress::GetLocalRaw()
 	 */
 	[[gnu::pure]]
-	std::string_view GetLocalRaw() const noexcept;
+	std::string_view GetLocalRaw() const noexcept {
+		return static_cast<const SocketAddress>(*this).GetLocalRaw();
+	}
+
+	/**
+	 * @see SocketAddress::GetLocalPath()
+	 */
+	[[nodiscard]] [[gnu::pure]]
+	const char *GetLocalPath() const noexcept {
+		return static_cast<const SocketAddress>(*this).GetLocalPath();
+	}
 #endif
 
 #ifdef HAVE_TCP

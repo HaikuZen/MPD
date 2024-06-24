@@ -125,7 +125,9 @@ public:
 	 * @see SocketAddress::GetLocalRaw()
 	 */
 	[[gnu::pure]]
-	std::string_view GetLocalRaw() const noexcept;
+	std::string_view GetLocalRaw() const noexcept {
+		return static_cast<const SocketAddress>(*this).GetLocalRaw();
+	}
 
 	/**
 	 * @see SocketAddress::GetLocalPath()
@@ -141,6 +143,7 @@ public:
 	 * address.
 	 */
 	void SetLocal(const char *path) noexcept;
+	void SetLocal(std::string_view path) noexcept;
 #endif
 
 #ifdef HAVE_TCP

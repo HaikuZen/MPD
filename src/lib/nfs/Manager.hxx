@@ -1,36 +1,21 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Copyright The Music Player Daemon Project
 
-#ifndef MPD_NFS_MANAGER_HXX
-#define MPD_NFS_MANAGER_HXX
+#pragma once
 
-#include "Connection.hxx"
 #include "event/IdleEvent.hxx"
 #include "util/IntrusiveList.hxx"
+
+#include <string_view>
+
+class NfsConnection;
 
 /**
  * A manager for NFS connections.  Handles multiple connections to
  * multiple NFS servers.
  */
 class NfsManager final {
-	class ManagedConnection final
-		: public NfsConnection,
-		  public IntrusiveListHook<>
-	{
-		NfsManager &manager;
-
-	public:
-		ManagedConnection(NfsManager &_manager, EventLoop &_loop,
-				  const char *_server,
-				  const char *_export_name) noexcept
-			:NfsConnection(_loop, _server, _export_name),
-			 manager(_manager) {}
-
-	protected:
-		/* virtual methods from NfsConnection */
-		void OnNfsConnectionError(std::exception_ptr &&e) noexcept override;
-	};
-
+	class ManagedConnection;
 	using List = IntrusiveList<ManagedConnection>;
 
 	List connections;
@@ -45,8 +30,7 @@ class NfsManager final {
 	IdleEvent idle_event;
 
 public:
-	explicit NfsManager(EventLoop &_loop) noexcept
-		:idle_event(_loop, BIND_THIS_METHOD(OnIdle)) {}
+	explicit NfsManager(EventLoop &_loop) noexcept;
 
 	/**
 	 * Must be run from EventLoop's thread.
@@ -57,16 +41,29 @@ public:
 		return idle_event.GetEventLoop();
 	}
 
-	[[gnu::pure]]
-	NfsConnection &GetConnection(const char *server,
-				     const char *export_name) noexcept;
+	/**
+	 * Create a new #NfsConnection, parsing the specified "nfs://"
+	 * URL.
+	 *
+	 * Throws on error.
+	 */
+	[[nodiscard]]
+	NfsConnection &MakeConnection(const char *url);
+
+	/**
+	 * Look up an existing #NfsConnection (or create a new one if
+	 * none matching the given parameters exists).  Unlike
+	 * MakeConnection(), this does not support options in a query
+	 * string.
+	 *
+	 * Throws on error.
+	 */
+	[[nodiscard]]
+	NfsConnection &GetConnection(std::string_view server,
+				     std::string_view export_name);
 
 private:
-	void ScheduleDelete(ManagedConnection &c) noexcept {
-		connections.erase(connections.iterator_to(c));
-		garbage.push_front(c);
-		idle_event.Schedule();
-	}
+	void ScheduleDelete(ManagedConnection &c) noexcept;
 
 	/**
 	 * Delete all connections on the #garbage list.
@@ -76,5 +73,3 @@ private:
 	/* virtual methods from IdleMonitor */
 	void OnIdle() noexcept;
 };
-
-#endif

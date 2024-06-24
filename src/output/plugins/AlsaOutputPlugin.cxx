@@ -294,13 +294,13 @@ private:
 
 	[[gnu::pure]]
 	bool LockIsActive() const noexcept {
-		const std::scoped_lock<Mutex> lock(mutex);
+		const std::scoped_lock lock{mutex};
 		return active;
 	}
 
 	[[gnu::pure]]
 	bool LockIsActiveAndNotWaiting() const noexcept {
-		const std::scoped_lock<Mutex> lock(mutex);
+		const std::scoped_lock lock{mutex};
 		return active && !waiting;
 	}
 
@@ -366,7 +366,7 @@ private:
 	void LockCaughtError() noexcept {
 		period_buffer.Clear();
 
-		const std::scoped_lock<Mutex> lock(mutex);
+		const std::scoped_lock lock{mutex};
 		error = std::current_exception();
 		active = false;
 		waiting = false;
@@ -381,7 +381,7 @@ private:
 	 */
 	void OnSilenceTimer() noexcept {
 		{
-			const std::scoped_lock<Mutex> lock(mutex);
+			const std::scoped_lock lock{mutex};
 			assert(active);
 			waiting = false;
 		}
@@ -447,7 +447,7 @@ AlsaOutput::AlsaOutput(EventLoop &_loop, const ConfigBlock &block)
 std::map<std::string, std::string, std::less<>>
 AlsaOutput::GetAttributes() const noexcept
 {
-	const std::scoped_lock<Mutex> lock(attributes_mutex);
+	const std::scoped_lock lock{attributes_mutex};
 
 	return {
 		{"allowed_formats", Alsa::ToString(allowed_formats)},
@@ -461,11 +461,11 @@ void
 AlsaOutput::SetAttribute(std::string &&name, std::string &&value)
 {
 	if (name == "allowed_formats") {
-		const std::scoped_lock<Mutex> lock(attributes_mutex);
+		const std::scoped_lock lock{attributes_mutex};
 		allowed_formats = Alsa::AllowedFormat::ParseList(value);
 #ifdef ENABLE_DSD
 	} else if (name == "dop") {
-		const std::scoped_lock<Mutex> lock(attributes_mutex);
+		const std::scoped_lock lock{attributes_mutex};
 		if (value == "0")
 			dop_setting = false;
 		else if (value == "1")
@@ -773,7 +773,7 @@ AlsaOutput::Open(AudioFormat &audio_format)
 #endif
 
 	{
-		const std::scoped_lock<Mutex> lock(attributes_mutex);
+		const std::scoped_lock lock{attributes_mutex};
 #ifdef ENABLE_DSD
 		dop = dop_setting;
 #endif
@@ -792,14 +792,14 @@ AlsaOutput::Open(AudioFormat &audio_format)
 			       SND_PCM_STREAM_PLAYBACK, mode);
 	if (err < 0)
 		throw Alsa::MakeError(err,
-				      FmtBuffer<256>("Failed to open ALSA device \"{}\"",
+				      FmtBuffer<256>("Failed to open ALSA device {:?}",
 						     GetDevice()));
 
 	const char *pcm_name = snd_pcm_name(pcm);
 	if (pcm_name == nullptr)
 		pcm_name = "?";
 
-	FmtDebug(alsa_output_domain, "opened {} type={}",
+	FmtDebug(alsa_output_domain, "opened {:?} type={}",
 		 pcm_name,
 		 snd_pcm_type_name(snd_pcm_type(pcm)));
 
@@ -830,7 +830,7 @@ AlsaOutput::Open(AudioFormat &audio_format)
 			   );
 	} catch (...) {
 		snd_pcm_close(pcm);
-		std::throw_with_nested(FmtRuntimeError("Error opening ALSA device \"{}\"",
+		std::throw_with_nested(FmtRuntimeError("Error opening ALSA device {:?}",
 						       GetDevice()));
 	}
 
@@ -877,7 +877,7 @@ AlsaOutput::Open(AudioFormat &audio_format)
 void
 AlsaOutput::Interrupt() noexcept
 {
-	std::unique_lock<Mutex> lock(mutex);
+	std::scoped_lock lock{mutex};
 
 	/* the "interrupted" flag will prevent
 	   LockWaitWriteAvailable() from actually waiting, and will
@@ -891,11 +891,11 @@ AlsaOutput::Recover(int err) noexcept
 {
 	if (err == -EPIPE) {
 		FmtDebug(alsa_output_domain,
-			 "Underrun on ALSA device \"{}\"",
+			 "Underrun on ALSA device {:?}",
 			 GetDevice());
 	} else if (err == -ESTRPIPE) {
 		FmtDebug(alsa_output_domain,
-			 "ALSA device \"{}\" was suspended",
+			 "ALSA device {:?} was suspended",
 			 GetDevice());
 	}
 
@@ -910,7 +910,6 @@ AlsaOutput::Recover(int err) noexcept
 		/* fall-through to snd_pcm_prepare: */
 		[[fallthrough]];
 
-	case SND_PCM_STATE_OPEN:
 	case SND_PCM_STATE_SETUP:
 	case SND_PCM_STATE_XRUN:
 		period_buffer.Rewind();
@@ -918,6 +917,7 @@ AlsaOutput::Recover(int err) noexcept
 		err = snd_pcm_prepare(pcm);
 		break;
 
+	case SND_PCM_STATE_OPEN:
 	case SND_PCM_STATE_DISCONNECTED:
 	case SND_PCM_STATE_DRAINING:
 		/* can't play in this state; throw the error */
@@ -951,7 +951,7 @@ AlsaOutput::CopyRingToPeriodBuffer() noexcept
 
 	period_buffer.AppendBytes(nbytes);
 
-	const std::scoped_lock<Mutex> lock(mutex);
+	const std::scoped_lock lock{mutex};
 	/* notify the OutputThread that there is now
 	   room in ring_buffer */
 	cond.notify_one();
@@ -1002,14 +1002,19 @@ AlsaOutput::DrainInternal()
 			period_buffer.FillWithSilence(silence, out_frame_size);
 
 		/* drain period_buffer */
-		if (!period_buffer.IsDrained()) {
+		unsigned int retry_count = 0;
+		while (!period_buffer.IsDrained() && retry_count <= 1) {
 			auto frames_written = WriteFromPeriodBuffer();
 			if (frames_written < 0) {
-				if (frames_written == -EAGAIN)
+				if (frames_written == -EAGAIN || frames_written == -EINTR)
 					return false;
 
-				throw Alsa::MakeError(frames_written,
-						      "snd_pcm_writei() failed");
+				if (Recover(frames_written) < 0)
+					throw Alsa::MakeError(frames_written,
+							      "snd_pcm_writei() failed");
+
+				retry_count++;
+				continue;
 			}
 
 			/* need to call CopyRingToPeriodBuffer() and
@@ -1064,7 +1069,7 @@ AlsaOutput::DrainInternal()
 void
 AlsaOutput::Drain()
 {
-	std::unique_lock<Mutex> lock(mutex);
+	std::unique_lock lock{mutex};
 
 	if (error)
 		std::rethrow_exception(error);
@@ -1105,7 +1110,7 @@ void
 AlsaOutput::Cancel() noexcept
 {
 	{
-		std::unique_lock<Mutex> lock(mutex);
+		std::lock_guard lock{mutex};
 		interrupted = false;
 	}
 
@@ -1123,7 +1128,7 @@ AlsaOutput::Cancel() noexcept
 #ifdef ENABLE_DSD
 	if (stop_dsd_silence && use_dsd) {
 		/* play some DSD silence instead of snd_pcm_drop() */
-		std::unique_lock<Mutex> lock(mutex);
+		std::unique_lock lock{mutex};
 		in_stop_dsd_silence = true;
 		drain = true;
 		cond.wait(lock, [this]{ return !drain || !active; });
@@ -1139,7 +1144,7 @@ AlsaOutput::Cancel() noexcept
 bool
 AlsaOutput::Pause() noexcept
 {
-	std::unique_lock<Mutex> lock(mutex);
+	std::lock_guard lock{mutex};
 	interrupted = false;
 
 	/* not implemented - this override exists only to reset the
@@ -1169,7 +1174,7 @@ AlsaOutput::LockWaitWriteAvailable()
 	const size_t out_block_size = pcm_export->GetOutputBlockSize();
 	const size_t min_available = 2 * out_block_size;
 
-	std::unique_lock<Mutex> lock(mutex);
+	std::unique_lock lock{mutex};
 
 	while (true) {
 		if (error)
@@ -1260,7 +1265,7 @@ try {
 	}
 
 	{
-		const std::scoped_lock<Mutex> lock(mutex);
+		const std::scoped_lock lock{mutex};
 
 		assert(active);
 
@@ -1300,7 +1305,7 @@ try {
 			   smaller than the ALSA-PCM buffer */
 
 			{
-				const std::scoped_lock<Mutex> lock(mutex);
+				const std::scoped_lock lock{mutex};
 				waiting = true;
 				cond.notify_one();
 			}

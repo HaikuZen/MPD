@@ -42,7 +42,7 @@ public:
 #ifdef ENABLE_UPNP
 #include "input/InputStream.hxx"
 size_t
-InputStream::LockRead(void *, size_t)
+InputStream::LockRead(std::span<std::byte>)
 {
 	return 0;
 }
@@ -55,7 +55,7 @@ public:
 	}
 
 	void OnDatabaseSongRemoved(const char *uri) noexcept override {
-		fmt::print("SongRemoved '{}'\n", uri);
+		fmt::print("SongRemoved {:?}\n", uri);
 	}
 };
 

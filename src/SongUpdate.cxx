@@ -7,9 +7,12 @@
 #include "db/plugins/simple/Directory.hxx"
 #include "storage/StorageInterface.hxx"
 #include "storage/FileInfo.hxx"
+#include "input/InputStream.hxx"
+#include "input/WaitReady.hxx"
 #include "decoder/DecoderList.hxx"
 #include "fs/AllocatedPath.hxx"
 #include "fs/FileInfo.hxx"
+#include "thread/Mutex.hxx"
 #include "tag/Builder.hxx"
 #include "TagFile.hxx"
 #include "TagStream.hxx"
@@ -34,13 +37,14 @@ Song::IsPluginAvailable() const noexcept
 }
 
 SongPtr
-Song::LoadFile(Storage &storage, std::string_view path_utf8, Directory &parent)
+Song::LoadFile(Storage &storage, std::string_view path_utf8,
+	       const StorageFileInfo &info, Directory &parent)
 {
 	assert(!uri_has_scheme(path_utf8));
 	assert(path_utf8.find('\n') == path_utf8.npos);
 
 	auto song = std::make_unique<Song>(path_utf8, parent);
-	if (!song->UpdateFile(storage))
+	if (!song->UpdateFile(storage, info))
 		return nullptr;
 
 	return song;
@@ -51,23 +55,22 @@ Song::LoadFile(Storage &storage, std::string_view path_utf8, Directory &parent)
 #ifdef ENABLE_DATABASE
 
 bool
-Song::UpdateFile(Storage &storage)
+Song::UpdateFile(Storage &storage, const StorageFileInfo &info)
 {
-	const auto &relative_uri = GetURI();
+	assert(info.IsRegular());
 
-	const auto info = storage.GetInfo(relative_uri.c_str(), true);
-	if (!info.IsRegular())
-		return false;
+	const auto &relative_uri = GetURI();
 
 	TagBuilder tag_builder;
 	auto new_audio_format = AudioFormat::Undefined();
 
 	try {
-		const auto path_fs = storage.MapFS(relative_uri.c_str());
+		const auto path_fs = storage.MapFS(relative_uri);
 		if (path_fs.IsNull()) {
-			const auto absolute_uri =
-				storage.MapUTF8(relative_uri.c_str());
-			if (!tag_stream_scan(absolute_uri.c_str(), tag_builder,
+			Mutex mutex;
+			const auto is = storage.OpenFile(relative_uri, mutex);
+			LockWaitReady(*is);
+			if (!tag_stream_scan(*is, tag_builder,
 					     &new_audio_format))
 				return false;
 		} else {

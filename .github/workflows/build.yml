@@ -33,12 +33,14 @@ jobs:
   build-linux:
     strategy:
       matrix:
-        os: [ubuntu-22.04, ubuntu-20.04]
+        compiler: [gcc11, gcc10]
         include:
-          - os: ubuntu-22.04
+          - compiler: gcc11
+            os: ubuntu-22.04
             cc: gcc-11
             cxx: g++-11
-          - os: ubuntu-20.04
+          - compiler: gcc10
+            os: ubuntu-22.04
             cc: gcc-10
             cxx: g++-10
 
@@ -51,16 +53,14 @@ jobs:
     steps:
       - id: checkout
         uses: actions/checkout@v4
-      - id: cache-ccache
-        uses: hendrikmuhs/ccache-action@v1
-        with:
-          key: ${{ matrix.os }}
+
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             ${{ matrix.cxx }} ${{matrix.cc }} \
-            libfmt-dev \
+            meson \
+            ccache \
             libgtest-dev \
             libpcre2-dev \
             libsystemd-dev libdbus-1-dev \
@@ -90,92 +90,56 @@ jobs:
             libchromaprint-dev \
             libgcrypt20-dev
 
-      - name: Full Build
-        uses: BSFishy/meson-build@v1.0.3
-        with:
-          action: build
-          directory: output/full
-          setup-options: -Ddocumentation=disabled -Dtest=true -Dsystemd=enabled -Dpcre=enabled
-          options: --verbose
-          meson-version: 0.56.0
-
-      - name: Unit Tests
-        uses: BSFishy/meson-build@v1.0.3
-        with:
-          action: test
-          directory: output/full
-          setup-options: -Ddocumentation=disabled -Dtest=true -Dsystemd=enabled -Dpcre=enabled
-          options: --verbose
-          meson-version: 0.56.0
-
-      - name: Mini Build
-        uses: BSFishy/meson-build@v1.0.3
-        with:
-          action: build
-          directory: output/mini
-          setup-options: -Dbuildtype=minsize -Dauto_features=disabled -Dtest=true -Ddaemon=false -Dinotify=false -Depoll=false -Deventfd=false -Dsignalfd=false -Dtcp=false -Ddsd=false -Ddatabase=false -Dneighbor=false -Dcue=false -Dfifo=false -Dhttpd=false -Dpipe=false -Drecorder=false -Dsnapcast=false
-          options: --verbose
-          meson-version: 0.56.0
-
-  build-macos:
-    runs-on: macos-latest
-    steps:
-      - id: checkout
-        uses: actions/checkout@v4
-
       - id: cache-ccache
         uses: hendrikmuhs/ccache-action@v1
         with:
-          key: macos
+          key: ${{ matrix.compiler }}
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: 3.x
-
-      - name: Install dependencies
+      - name: Configure
         run: |
-          brew install \
-            meson ninja \
-            fmt \
-            googletest \
-            icu4c \
-            ffmpeg \
-            libnfs \
-            yajl \
-            libupnp \
-            libid3tag \
-            chromaprint \
-            libsamplerate \
-            libsoxr \
-            flac \
-            opus \
-            libvorbis \
-            faad2 \
-            wavpack \
-            libmpdclient
+          meson setup \
+            -Ddocumentation=disabled \
+            -Dtest=true \
+            -Dsystemd=enabled \
+            -Dpcre=enabled \
+            --force-fallback-for=fmt \
+            output/full
 
       - name: Build
-        uses: BSFishy/meson-build@v1.0.3
-        with:
-          action: build
-          directory: output
-          setup-options: -Ddocumentation=disabled -Dtest=true
-          options: --verbose
-          meson-version: 0.56.0
+        run: meson compile -C output/full --verbose
 
       - name: Unit Tests
-        uses: BSFishy/meson-build@v1.0.3
-        with:
-          action: test
-          directory: output
-          setup-options: -Ddocumentation=disabled -Dtest=true
-          options: --verbose
-          meson-version: 0.56.0
+        run: meson test -C output/full
+
+      - name: Configure Mini
+        run: |
+          meson setup \
+            -Dbuildtype=minsize \
+            -Dauto_features=disabled \
+            -Dtest=true \
+            -Ddaemon=false \
+            -Dinotify=false -Depoll=false -Deventfd=false \
+            -Dsignalfd=false \
+            -Dtcp=false \
+            -Ddsd=false \
+            -Ddatabase=false \
+            -Dneighbor=false \
+            -Dcue=false \
+            -Dfifo=false \
+            -Dhttpd=false -Dpipe=false -Drecorder=false \
+            -Dsnapcast=false \
+            output/mini
+
+      - name: Build Mini
+        run: meson compile -C output/mini --verbose
+
+      - name: Unit Tests Mini
+        run: meson test -C output/mini
 
   build-msys2:
     strategy:
       matrix:
-        platform: ['MINGW32', 'MINGW64', 'UCRT64']
+        platform: ['MINGW64', 'UCRT64']
     defaults:
       run:
         shell: msys2 {0}

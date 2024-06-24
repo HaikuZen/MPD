@@ -102,7 +102,12 @@ nfs
 
 Load music files from a NFS server.  It is used when
 :code:`music_directory` contains a ``nfs://`` URI according to
-RFC2224, for example :samp:`nfs://servername/path`.
+RFC2224, for example :samp:`nfs://servername/path`.  MPD supports the
+libnfs URL arguments as documented in the `libnfs README
+<https://github.com/sahlberg/libnfs/blob/master/README>`__.  For
+example, you can use NFSv4 with the ``version`` argument::
+
+ music_directory "nfs://server/music?version=4"
 
 See :ref:`input_nfs` for more information.
 
@@ -307,7 +312,7 @@ used according to RFC2224. Example:
 
      mpc add nfs://servername/path/filename.ogg
 
-This plugin uses :program:`libnfs`, which supports only NFS version 3.
+This plugin uses :program:`libnfs`.
 Since :program:`MPD` is not allowed to bind to so-called "privileged
 ports", the NFS server needs to enable the ``insecure`` setting;
 example :file:`/etc/exports`:
@@ -1095,27 +1100,6 @@ The "OpenAL" plugin uses `libopenal <http://kcat.strangesoft.net/openal.html>`_.
    * - **device NAME**
      - Sets the device which should be used. This can be any valid OpenAL device name. If not specified, then libopenal will choose a default device.
 
-osx
----
-The "Mac OS X" plugin uses Apple's CoreAudio API.
-
-.. list-table::
-   :widths: 20 80
-   :header-rows: 1
-
-   * - Setting
-     - Description
-   * - **device NAME**
-     - Sets the device which should be used. Uses device names as listed in the "Audio Devices" window of "Audio MIDI Setup".
-   * - **hog_device yes|no**
-     - Hog the device. This means that it takes exclusive control of the audio output device it is playing through, and no other program can access it.
-   * - **dop yes|no**
-     - If set to yes, then DSD over PCM according to the `DoP standard <http://dsd-guide.com/dop-open-standard>`_ is enabled. This wraps DSD samples in fake 24 bit PCM, and is understood by some DSD capable products, but may be harmful to other hardware. Therefore, the default is no and you can enable the option at your own risk. Under macOS you must make sure to select a physical mode on the output device which supports at least 24 bits per channel as the Mac OS X plugin only changes the sample rate.
-   * - **channel_map SOURCE,SOURCE,...**
-     - Specifies a channel map. If your audio device has more than two outputs this allows you to route audio to auxillary outputs. For predictable results you should also specify a "format" with a fixed number of channels, e.g. "*:*:2". The number of items in the channel map must match the number of output channels of your output device. Each list entry specifies the source for that output channel; use "-1" to silence an output. For example, if you have a four-channel output device and you wish to send stereo sound (format "*:*:2") to outputs 3 and 4 while leaving outputs 1 and 2 silent then set the channel map to "-1,-1,0,1". In this example '0' and '1' denote the left and right channel respectively.
-
-       The channel map may not refer to outputs that do not exist according to the format. If the format is "*:*:1" (mono) and you have a four-channel sound card then "-1,-1,0,0" (dual mono output on the second pair of sound card outputs) is a valid channel map but "-1,-1,0,1" is not because the second channel ('1') does not exist when the output is mono.
-
 pipe
 ----
 
@@ -1267,7 +1251,7 @@ You must set a format.
        bind on all addresses on port :samp:`1704`.
    * - **zeroconf yes|no**
      - Publish the Snapcast server as service type ``_snapcast._tcp``
-       via Zeroconf (Avahi or Bonjour).  Default is :samp:`yes`.
+       via Zeroconf (Avahi).  Default is :samp:`yes`.
 
 
 solaris

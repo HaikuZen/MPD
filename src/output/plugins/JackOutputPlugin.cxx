@@ -102,7 +102,7 @@ private:
 	void Disconnect() noexcept;
 
 	void Shutdown(const char *reason) noexcept {
-		const std::scoped_lock<Mutex> lock(mutex);
+		const std::scoped_lock lock{mutex};
 		error = std::make_exception_ptr(FmtRuntimeError("JACK connection shutdown: {}",
 								reason));
 	}
@@ -166,7 +166,7 @@ public:
 
 private:
 	bool LockWasShutdown() const noexcept {
-		const std::scoped_lock<Mutex> lock(mutex);
+		const std::scoped_lock lock{mutex};
 		return !!error;
 	}
 };
@@ -410,7 +410,7 @@ JackOutput::Connect()
 					      portflags, 0);
 		if (ports[i] == nullptr) {
 			Disconnect();
-			throw FmtRuntimeError("Cannot register output port \"{}\"",
+			throw FmtRuntimeError("Cannot register output port {:?}",
 					      source_ports[i]);
 		}
 	}
@@ -521,7 +521,7 @@ JackOutput::Start()
 			     jports[num_dports] != nullptr;
 		     ++num_dports) {
 			FmtDebug(jack_output_domain,
-				 "destination_port[{}] = '{}'\n",
+				 "destination_port[{}] = {:?}\n",
 				 num_dports, jports[num_dports]);
 			dports[num_dports] = jports[num_dports];
 		}
@@ -618,7 +618,7 @@ JackOutput::Open(AudioFormat &new_audio_format)
 void
 JackOutput::Interrupt() noexcept
 {
-	const std::unique_lock<Mutex> lock(mutex);
+	const std::lock_guard lock{mutex};
 
 	/* the "interrupted" flag will prevent Play() from waiting,
 	   and will instead throw AudioOutputInterrupted */
@@ -680,7 +680,7 @@ JackOutput::Play(std::span<const std::byte> _src)
 
 	while (true) {
 		{
-			const std::scoped_lock<Mutex> lock(mutex);
+			const std::scoped_lock lock{mutex};
 			if (error)
 				std::rethrow_exception(error);
 
@@ -702,7 +702,7 @@ JackOutput::Play(std::span<const std::byte> _src)
 void
 JackOutput::Cancel() noexcept
 {
-	const std::unique_lock<Mutex> lock(mutex);
+	const std::lock_guard lock{mutex};
 	interrupted = false;
 }
 
@@ -710,7 +710,7 @@ inline bool
 JackOutput::Pause()
 {
 	{
-		const std::scoped_lock<Mutex> lock(mutex);
+		const std::scoped_lock lock{mutex};
 		interrupted = false;
 		if (error)
 			std::rethrow_exception(error);

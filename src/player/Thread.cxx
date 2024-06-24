@@ -367,6 +367,7 @@ Player::StartDecoder(std::unique_lock<Mutex> &lock,
 		     std::shared_ptr<MusicPipe> _pipe,
 		     bool initial_seek_essential) noexcept
 {
+	assert(!decoder_starting);
 	assert(queued || pc.command == PlayerCommand::SEEK);
 	assert(pc.next_song != nullptr);
 
@@ -399,6 +400,8 @@ Player::StopDecoder(std::unique_lock<Mutex> &lock) noexcept
 		   pipe */
 		ResetCrossFade();
 	}
+
+	decoder_starting = false;
 }
 
 bool
@@ -622,7 +625,7 @@ Player::CheckDecoderStartup(std::unique_lock<Mutex> &lock) noexcept
 		if (!paused && !OpenOutput()) {
 			FmtError(player_domain,
 				 "problems opening audio device "
-				 "while playing \"{}\"",
+				 "while playing {:?}",
 				 dc.song->GetURI());
 			return true;
 		}
@@ -783,11 +786,6 @@ Player::ProcessCommand(std::unique_lock<Mutex> &lock) noexcept
 
 		queued = true;
 		pc.CommandFinished();
-
-		if (dc.IsIdle())
-			StartDecoder(lock, std::make_shared<MusicPipe>(),
-				     false);
-
 		break;
 
 	case PlayerCommand::PAUSE:
@@ -925,7 +923,7 @@ PlayerControl::PlayChunk(DetachedSong &song, MusicChunkPtr chunk,
 		return;
 
 	{
-		const std::scoped_lock<Mutex> lock(mutex);
+		const std::scoped_lock lock{mutex};
 		bit_rate = chunk->bit_rate;
 	}
 
@@ -999,7 +997,7 @@ Player::PlayNextChunk() noexcept
 		} else {
 			/* there are not enough decoded chunks yet */
 
-			std::unique_lock<Mutex> lock(pc.mutex);
+			std::unique_lock lock{pc.mutex};
 
 			if (dc.IsIdle()) {
 				/* the decoder isn't running, abort
@@ -1047,7 +1045,7 @@ Player::PlayNextChunk() noexcept
 		return false;
 	}
 
-	const std::scoped_lock<Mutex> lock(pc.mutex);
+	const std::scoped_lock lock{pc.mutex};
 
 	/* this formula should prevent that the decoder gets woken up
 	   with each chunk; it is more efficient to make it decode a
@@ -1069,7 +1067,7 @@ Player::SongBorder() noexcept
 	{
 		const ScopeUnlock unlock(pc.mutex);
 
-		FmtNotice(player_domain, "played \"{}\"", song->GetURI());
+		FmtNotice(player_domain, "played {:?}", song->GetURI());
 
 		ReplacePipe(dc.pipe);
 
@@ -1098,7 +1096,7 @@ Player::Run() noexcept
 {
 	pipe = std::make_shared<MusicPipe>();
 
-	std::unique_lock<Mutex> lock(pc.mutex);
+	std::unique_lock lock{pc.mutex};
 
 	StartDecoder(lock, pipe, true);
 	ActivateDecoder();
@@ -1215,7 +1213,7 @@ Player::Run() noexcept
 	cross_fade_tag.reset();
 
 	if (song != nullptr) {
-		FmtNotice(player_domain, "played \"{}\"", song->GetURI());
+		FmtNotice(player_domain, "played {:?}", song->GetURI());
 		song.reset();
 	}
 
@@ -1250,7 +1248,7 @@ try {
 
 	MusicBuffer buffer{config.buffer_chunks};
 
-	std::unique_lock<Mutex> lock(mutex);
+	std::unique_lock lock{mutex};
 
 	while (true) {
 		switch (command) {

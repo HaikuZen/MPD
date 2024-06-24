@@ -37,12 +37,6 @@ AllocatedSocketAddress::SetSize(size_type new_size) noexcept
 
 #ifdef HAVE_UN
 
-std::string_view
-AllocatedSocketAddress::GetLocalRaw() const noexcept
-{
-	return SocketAddress(*this).GetLocalRaw();
-}
-
 void
 AllocatedSocketAddress::SetLocal(const char *path) noexcept
 {
@@ -60,6 +54,27 @@ AllocatedSocketAddress::SetLocal(const char *path) noexcept
 
 	if (is_abstract)
 		sun->sun_path[0] = 0;
+}
+
+void
+AllocatedSocketAddress::SetLocal(std::string_view path) noexcept
+{
+	const bool is_abstract = path.starts_with('@');
+
+	/* sun_path must be null-terminated unless it's an abstract
+	   socket */
+	const size_t path_length = path.size() + !is_abstract;
+
+	struct sockaddr_un *sun;
+	SetSize(sizeof(*sun) - sizeof(sun->sun_path) + path_length);
+	sun = (struct sockaddr_un *)address;
+	sun->sun_family = AF_LOCAL;
+
+	auto out = std::copy(path.begin(), path.end(), sun->sun_path);
+	if (is_abstract)
+		sun->sun_path[0] = 0;
+	else
+		*out = 0;
 }
 
 #endif

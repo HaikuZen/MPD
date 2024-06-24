@@ -222,7 +222,7 @@ AlsaInputStream::DispatchSockets() noexcept
 try {
 	non_block.DispatchSockets(*this, capture_handle);
 
-	const std::scoped_lock<Mutex> protect(mutex);
+	const std::scoped_lock protect{mutex};
 
 	auto w = PrepareWriteBuffer();
 	const snd_pcm_uframes_t w_frames = w.size() / frame_size;
@@ -256,13 +256,13 @@ AlsaInputStream::Recover(int err)
 	switch(err) {
 	case -EPIPE:
 		FmtDebug(alsa_input_domain,
-			 "Overrun on ALSA capture device \"{}\"",
+			 "Overrun on ALSA capture device {:?}",
 			 device);
 		break;
 
 	case -ESTRPIPE:
 		FmtDebug(alsa_input_domain,
-			 "ALSA capture device \"{}\" was suspended",
+			 "ALSA capture device {:?} was suspended",
 			 device);
 		break;
 	}

@@ -12,7 +12,7 @@
 
 #include <string.h>
 
-AsyncInputStream::AsyncInputStream(EventLoop &event_loop, const char *_url,
+AsyncInputStream::AsyncInputStream(EventLoop &event_loop, std::string_view _url,
 				   Mutex &_mutex,
 				   size_t _buffer_size,
 				   size_t _resume_at) noexcept
@@ -166,7 +166,7 @@ AsyncInputStream::IsAvailable() const noexcept
 
 size_t
 AsyncInputStream::Read(std::unique_lock<Mutex> &lock,
-		       void *ptr, size_t read_size)
+		       std::span<std::byte> dest)
 {
 	assert(!GetEventLoop().IsInside());
 
@@ -185,8 +185,8 @@ AsyncInputStream::Read(std::unique_lock<Mutex> &lock,
 		cond_handler.cond.wait(lock);
 	}
 
-	const size_t nbytes = std::min(read_size, r.size());
-	memcpy(ptr, r.data(), nbytes);
+	const size_t nbytes = std::min(dest.size(), r.size());
+	memcpy(dest.data(), r.data(), nbytes);
 	buffer.Consume(nbytes);
 
 	offset += (offset_type)nbytes;
@@ -242,7 +242,7 @@ AsyncInputStream::AppendToBuffer(std::span<const std::byte> src) noexcept
 void
 AsyncInputStream::DeferredResume() noexcept
 {
-	const std::scoped_lock<Mutex> protect(mutex);
+	const std::scoped_lock protect{mutex};
 
 	try {
 		Resume();
@@ -255,7 +255,7 @@ AsyncInputStream::DeferredResume() noexcept
 void
 AsyncInputStream::DeferredSeek() noexcept
 {
-	const std::scoped_lock<Mutex> protect(mutex);
+	const std::scoped_lock protect{mutex};
 	if (seek_state != SeekState::SCHEDULED)
 		return;
 

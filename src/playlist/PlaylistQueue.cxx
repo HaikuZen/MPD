@@ -10,6 +10,7 @@
 #include "queue/Playlist.hxx"
 #include "SongEnumerator.hxx"
 #include "song/DetachedSong.hxx"
+#include "input/Error.hxx"
 #include "thread/Mutex.hxx"
 #include "fs/Traits.hxx"
 #include "Log.hxx"
@@ -45,7 +46,7 @@ playlist_load_into_queue(const char *uri, SongEnumerator &e,
 						   loader)) {
 			failures += 1;
 			if (failures < max_log_msgs) {
-				FmtError(playlist_domain, "Failed to load \"{}\".", song->GetURI());
+				FmtError(playlist_domain, "Failed to load {:?}.", song->GetURI());
 			} else if (failures == max_log_msgs) {
 				LogError(playlist_domain, "Further errors for this playlist will not be logged.");
 			}
@@ -61,7 +62,7 @@ playlist_open_into_queue(const LocatedUri &uri,
 			 unsigned start_index, unsigned end_index,
 			 playlist &dest, PlayerControl &pc,
 			 const SongLoader &loader)
-{
+try {
 	Mutex mutex;
 
 	auto playlist = playlist_open_any(uri,
@@ -75,4 +76,9 @@ playlist_open_into_queue(const LocatedUri &uri,
 	playlist_load_into_queue(uri.canonical_uri, *playlist,
 				 start_index, end_index,
 				 dest, pc, loader);
+} catch (...) {
+	if (IsFileNotFound(std::current_exception()))
+		throw PlaylistError::NoSuchList();
+
+	throw;
 }

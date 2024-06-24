@@ -65,11 +65,12 @@ In any case, you need:
 Each plugin usually needs a codec library, which you also need to
 install. Check the :doc:`plugins` for details about required libraries
 
-For example, the following installs a fairly complete list of build dependencies on Debian Bullseye:
+For example, the following installs a fairly complete list of build
+dependencies on Debian Bookworm:
 
 .. code-block:: none
 
-    apt install meson g++ \
+    apt install meson g++ pkgconf \
       libfmt-dev \
       libpcre2-dev \
       libmad0-dev libmpg123-dev libid3tag0-dev \
@@ -83,7 +84,7 @@ For example, the following installs a fairly complete list of build dependencies
       libsamplerate0-dev libsoxr-dev \
       libbz2-dev libcdio-paranoia-dev libiso9660-dev libmms-dev \
       libzzip-dev \
-      libcurl4-gnutls-dev libyajl-dev libexpat-dev \
+      libcurl4-gnutls-dev libyajl-dev libexpat1-dev \
       libasound2-dev libao-dev libjack-jackd2-dev libopenal-dev \
       libpulse-dev libshout3-dev \
       libsndio-dev \
@@ -96,7 +97,9 @@ For example, the following installs a fairly complete list of build dependencies
       libgtest-dev \
       libicu-dev \
       libchromaprint-dev \
-      libgcrypt20-dev
+      libgcrypt20-dev \
+      libsystemd-dev \
+      libpipewire-0.3-dev
       
 
 Now configure the source tree:
@@ -197,7 +200,7 @@ Compiling for Android
 You need:
 
 * Android SDK (sdk platform 34, build tools 34.0.0)
-* `Android NDK r26b <https://developer.android.com/ndk/downloads>`_
+* `Android NDK r27 <https://developer.android.com/ndk/downloads>`_
 * `Meson 0.56.0 <http://mesonbuild.com/>`__ and `Ninja
   <https://ninja-build.org/>`__
 * cmake
@@ -488,7 +491,11 @@ More information can be found in the :ref:`encoder_plugins` reference.
 Configuring audio outputs
 -------------------------
 
-Audio outputs are devices which actually play the audio chunks produced by :program:`MPD`. You can configure any number of audio output devices, but there must be at least one. If none is configured, :program:`MPD` attempts to auto-detect. Usually, this works quite well with ALSA, OSS and on Mac OS X.
+Audio outputs are devices which actually play the audio chunks
+produced by :program:`MPD`. You can configure any number of audio
+output devices, but there must be at least one. If none is configured,
+:program:`MPD` attempts to auto-detect. Usually, this works quite well
+with ALSA and OSS.
 
 To configure an audio output manually, add one or more
 :code:`audio_output` blocks to :file:`mpd.conf`:
@@ -685,6 +692,11 @@ On songs without ReplayGain tags, the setting
 ``replaygain_missing_preamp`` is used instead.  If this setting is not
 configured, then no ReplayGain is applied to such songs, and they will
 appear too loud.
+
+The setting ``replaygain_limit`` enables or disables ReplayGain
+limiting.  When enabled (the default), MPD will use the peak from the
+ReplayGain tags to minimize clipping; disabling it will allow clipping
+of some quiet tracks.
 
 ReplayGain is usually implemented with a software volume filter (which
 prevents `Bit-perfect playback`_).  To use a hardware mixer, set
@@ -946,7 +958,7 @@ Do not change these unless you know what you are doing.
 Zeroconf
 ^^^^^^^^
 
-If Zeroconf support (`Avahi <http://avahi.org/>`_ or Apple's Bonjour)
+If Zeroconf support (`Avahi <http://avahi.org/>`_
 was enabled at compile time with :code:`-Dzeroconf=...`,
 :program:`MPD` can announce its presence on the network. The following
 settings control this feature:

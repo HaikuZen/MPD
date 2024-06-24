@@ -45,7 +45,7 @@ class UringInputStream final : public AsyncInputStream, Uring::ReadHandler {
 
 public:
 	UringInputStream(EventLoop &event_loop, Uring::Queue &_uring,
-			 const char *path,
+			 std::string_view path,
 			 UniqueFileDescriptor &&_fd,
 			 offset_type _size, Mutex &_mutex)
 		:AsyncInputStream(event_loop,
@@ -133,7 +133,7 @@ UringInputStream::OnRead(std::unique_ptr<std::byte[]> data,
 {
 	read_operation.reset();
 
-	const std::scoped_lock<Mutex> protect(mutex);
+	const std::scoped_lock protect{mutex};
 
 	if (nbytes == 0) {
 		postponed_exception = std::make_exception_ptr(std::runtime_error("Premature end of file"));
@@ -154,7 +154,7 @@ UringInputStream::OnReadError(int error) noexcept
 {
 	read_operation.reset();
 
-	const std::scoped_lock<Mutex> protect(mutex);
+	const std::scoped_lock protect{mutex};
 
 	postponed_exception = std::make_exception_ptr(MakeErrno(error, "Read failed"));
 	InvokeOnAvailable();
