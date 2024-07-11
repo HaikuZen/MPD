@@ -33,16 +33,26 @@ jobs:
   build-linux:
     strategy:
       matrix:
-        compiler: [gcc11, gcc10]
+        compiler: [gcc14, gcc10, clang]
         include:
-          - compiler: gcc11
-            os: ubuntu-22.04
-            cc: gcc-11
-            cxx: g++-11
+          - compiler: gcc14
+            os: ubuntu-24.04
+            cc: gcc-14
+            cxx: g++-14
+            packages: g++-14
+            meson_options:
           - compiler: gcc10
-            os: ubuntu-22.04
+            os: ubuntu-24.04
             cc: gcc-10
             cxx: g++-10
+            packages: g++-10
+            meson_options:
+          - compiler: clang
+            os: ubuntu-24.04
+            cc: clang
+            cxx: clang++
+            packages: clang
+            meson_options: --force-fallback-for=fmt,gtest
 
     runs-on: ${{ matrix.os }}
 
@@ -58,9 +68,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            ${{ matrix.cxx }} ${{matrix.cc }} \
+            ${{ matrix.packages }} \
             meson \
             ccache \
+            libfmt-dev \
             libgtest-dev \
             libpcre2-dev \
             libsystemd-dev libdbus-1-dev \
@@ -102,7 +113,8 @@ jobs:
             -Dtest=true \
             -Dsystemd=enabled \
             -Dpcre=enabled \
-            --force-fallback-for=fmt \
+            --wrap-mode nofallback \
+            ${{ matrix.meson_options }} \
             output/full
 
       - name: Build
@@ -128,6 +140,8 @@ jobs:
             -Dfifo=false \
             -Dhttpd=false -Dpipe=false -Drecorder=false \
             -Dsnapcast=false \
+            --wrap-mode nofallback \
+            ${{ matrix.meson_options }} \
             output/mini
 
       - name: Build Mini

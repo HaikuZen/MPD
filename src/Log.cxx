@@ -4,8 +4,11 @@
 #include "Log.hxx"
 #include "lib/fmt/ExceptionFormatter.hxx"
 #include "util/Domain.hxx"
+#include "util/Exception.hxx"
 
 #include <fmt/format.h>
+
+#include <iterator> // for std::back_inserter()
 
 static constexpr Domain exception_domain("exception");
 

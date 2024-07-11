@@ -30,6 +30,7 @@ ver 0.24 (not yet released)
   - nfs: support libnfs URL arguments
 * input
   - alsa: limit ALSA buffer time to 2 seconds
+  - alsa: set up a channel map
   - curl: add "connect_timeout" configuration
 * decoder
   - ffmpeg: require FFmpeg 4.0 or later
@@ -62,6 +63,7 @@ ver 0.24 (not yet released)
 * remove Boost dependency
 * require libfmt 9 or later
 * documentation: switch to sphinx-rtd-theme
+* require Meson 1.0
 
 ver 0.23.15 (2023/12/20)
 * decoder

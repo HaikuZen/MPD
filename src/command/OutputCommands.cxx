@@ -10,6 +10,7 @@
 #include "Partition.hxx"
 #include "IdleFlags.hxx"
 #include "util/CharUtil.hxx"
+#include "util/StringVerify.hxx"
 
 CommandResult
 handle_enableoutput(Client &client, Request args, Response &r)
@@ -19,8 +20,7 @@ handle_enableoutput(Client &client, Request args, Response &r)
 
 	auto &partition = client.GetPartition();
 
-	if (!audio_output_enable_index(partition.outputs,
-				       partition.mixer_memento,
+	if (!audio_output_enable_index(partition,
 				       device)) {
 		r.Error(ACK_ERROR_NO_EXIST, "No such audio output");
 		return CommandResult::ERROR;
@@ -37,8 +37,7 @@ handle_disableoutput(Client &client, Request args, Response &r)
 
 	auto &partition = client.GetPartition();
 
-	if (!audio_output_disable_index(partition.outputs,
-					partition.mixer_memento,
+	if (!audio_output_disable_index(partition,
 					device)) {
 		r.Error(ACK_ERROR_NO_EXIST, "No such audio output");
 		return CommandResult::ERROR;
@@ -55,8 +54,7 @@ handle_toggleoutput(Client &client, Request args, Response &r)
 
 	auto &partition = client.GetPartition();
 
-	if (!audio_output_toggle_index(partition.outputs,
-					partition.mixer_memento,
+	if (!audio_output_toggle_index(partition,
 				       device)) {
 		r.Error(ACK_ERROR_NO_EXIST, "No such audio output");
 		return CommandResult::ERROR;
@@ -65,22 +63,16 @@ handle_toggleoutput(Client &client, Request args, Response &r)
 	return CommandResult::OK;
 }
 
-static bool
+static constexpr bool
 IsValidAttributeNameChar(char ch) noexcept
 {
 	return IsAlphaNumericASCII(ch) || ch == '_';
 }
 
-[[gnu::pure]]
-static bool
+static constexpr bool
 IsValidAttributeName(const char *s) noexcept
 {
-	do {
-		if (!IsValidAttributeNameChar(*s))
-			return false;
-	} while (*++s);
-
-	return true;
+	return CheckCharsNonEmpty(s, IsValidAttributeNameChar);
 }
 
 CommandResult

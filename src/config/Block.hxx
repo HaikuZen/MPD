@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Copyright The Music Player Daemon Project
 
-#ifndef MPD_CONFIG_BLOCK_HXX
-#define MPD_CONFIG_BLOCK_HXX
+#pragma once
 
+#include <concepts>
+#include <chrono>
 #include <string>
 #include <vector>
 
@@ -33,6 +34,9 @@ struct BlockParam {
 
 	bool GetBoolValue() const;
 
+	std::chrono::steady_clock::duration
+	GetDuration(std::chrono::steady_clock::duration min_value) const;
+
 	/**
 	 * Call this method in a "catch" block to throw a nested
 	 * exception showing the location of this setting in the
@@ -45,7 +49,7 @@ struct BlockParam {
 	 * Invoke a function with the configured value; if the
 	 * function throws, call ThrowWithNested().
 	 */
-	template<typename F>
+	template<std::regular_invocable<const char *> F>
 	auto With(F &&f) const {
 		try {
 			return f(value.c_str());
@@ -122,6 +126,11 @@ struct ConfigBlock {
 
 	bool GetBlockValue(const char *name, bool default_value) const;
 
+	std::chrono::steady_clock::duration
+	GetDuration(const char *name,
+		    std::chrono::steady_clock::duration min_value,
+		    std::chrono::steady_clock::duration default_value) const;
+
 	/**
 	 * Call this method in a "catch" block to throw a nested
 	 * exception showing the location of this block in the
@@ -130,5 +139,3 @@ struct ConfigBlock {
 	[[noreturn]]
 	void ThrowWithNested() const;
 };
-
-#endif
