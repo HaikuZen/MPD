@@ -2,9 +2,7 @@
 // Copyright The Music Player Daemon Project
 
 #include "AsyncInputStream.hxx"
-#include "CondHandler.hxx"
 #include "tag/Tag.hxx"
-#include "thread/Cond.hxx"
 #include "event/Loop.hxx"
 
 #include <cassert>
@@ -20,7 +18,6 @@ AsyncInputStream::AsyncInputStream(EventLoop &event_loop, std::string_view _url,
 	 deferred_resume(event_loop, BIND_THIS_METHOD(DeferredResume)),
 	 deferred_seek(event_loop, BIND_THIS_METHOD(DeferredSeek)),
 	 allocation(_buffer_size),
-	 buffer(&allocation.front(), allocation.size()),
 	 resume_at(_resume_at)
 {
 	allocation.SetName("InputStream");
@@ -127,10 +124,7 @@ AsyncInputStream::Seek(std::unique_lock<Mutex> &lock,
 
 	deferred_seek.Schedule();
 
-	CondInputStreamHandler cond_handler;
-	const ScopeExchangeInputStreamHandler h(*this, &cond_handler);
-	cond_handler.cond.wait(lock,
-			       [this]{ return seek_state == SeekState::NONE; });
+	caller_cond.wait(lock, [this]{ return seek_state == SeekState::NONE; });
 
 	Check();
 }
@@ -147,6 +141,7 @@ AsyncInputStream::SeekDone() noexcept
 	open = true;
 
 	seek_state = SeekState::NONE;
+	caller_cond.notify_one();
 	InvokeOnAvailable();
 }
 
@@ -170,8 +165,6 @@ AsyncInputStream::Read(std::unique_lock<Mutex> &lock,
 {
 	assert(!GetEventLoop().IsInside());
 
-	CondInputStreamHandler cond_handler;
-
 	/* wait for data */
 	CircularBuffer<std::byte>::Range r;
 	while (true) {
@@ -181,8 +174,7 @@ AsyncInputStream::Read(std::unique_lock<Mutex> &lock,
 		if (!r.empty() || IsEOF())
 			break;
 
-		const ScopeExchangeInputStreamHandler h(*this, &cond_handler);
-		cond_handler.cond.wait(lock);
+		caller_cond.wait(lock);
 	}
 
 	const size_t nbytes = std::min(dest.size(), r.size());
@@ -204,8 +196,10 @@ AsyncInputStream::CommitWriteBuffer(size_t nbytes) noexcept
 
 	if (!IsReady())
 		SetReady();
-	else
+	else {
+		caller_cond.notify_one();
 		InvokeOnAvailable();
+	}
 }
 
 void
@@ -235,8 +229,10 @@ AsyncInputStream::AppendToBuffer(std::span<const std::byte> src) noexcept
 
 	if (!IsReady())
 		SetReady();
-	else
+	else {
+		caller_cond.notify_one();
 		InvokeOnAvailable();
+	}
 }
 
 void
@@ -248,6 +244,7 @@ AsyncInputStream::DeferredResume() noexcept
 		Resume();
 	} catch (...) {
 		postponed_exception = std::current_exception();
+		caller_cond.notify_one();
 		InvokeOnAvailable();
 	}
 }
@@ -270,6 +267,7 @@ AsyncInputStream::DeferredSeek() noexcept
 	} catch (...) {
 		seek_state = SeekState::NONE;
 		postponed_exception = std::current_exception();
+		caller_cond.notify_one();
 		InvokeOnAvailable();
 	}
 }

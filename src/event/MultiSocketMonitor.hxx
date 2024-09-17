@@ -12,6 +12,7 @@
 #include <cassert>
 #include <forward_list>
 #include <iterator>
+#include <span>
 
 #ifndef _WIN32
 struct pollfd;
@@ -108,11 +109,14 @@ class MultiSocketMonitor
 	 * epoll (epoll_ctl() returns -EPERM).
 	 */
 	std::forward_list<AlwaysReady> always_ready_fds;
+
+	Event::Duration always_ready_timeout;
 #endif
 
-public:
-	MultiSocketMonitor(EventLoop &_loop) noexcept;
+protected:
+	explicit MultiSocketMonitor(EventLoop &_loop) noexcept;
 
+public:
 	EventLoop &GetEventLoop() const noexcept {
 		return idle_event.GetEventLoop();
 	}
@@ -189,7 +193,7 @@ public:
 	 *
 	 * May only be called from PrepareSockets().
 	 */
-	void ReplaceSocketList(pollfd *pfds, unsigned n) noexcept;
+	void ReplaceSocketList(std::span<pollfd> pfds) noexcept;
 #endif
 
 	/**

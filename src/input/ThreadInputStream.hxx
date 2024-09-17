@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Copyright The Music Player Daemon Project
 
-#ifndef MPD_THREAD_INPUT_STREAM_HXX
-#define MPD_THREAD_INPUT_STREAM_HXX
+#pragma once
 
 #include "InputStream.hxx"
 #include "thread/Thread.hxx"
@@ -11,7 +10,7 @@
 #include "util/CircularBuffer.hxx"
 
 #include <cassert>
-#include <cstdint>
+#include <cstddef>
 #include <exception>
 
 /**
@@ -20,8 +19,6 @@
  * being read into a ring buffer, and that buffer is then consumed by
  * another thread using the regular #InputStream API.  This class
  * manages the thread and the buffer.
- *
- * This works only for "streams": unknown length, no seeking, no tags.
  *
  * The implementation must call Stop() before its destruction
  * completes.  This cannot be done in ~ThreadInputStream() because at
@@ -40,11 +37,18 @@ class ThreadInputStream : public InputStream {
 	 */
 	Cond wake_cond;
 
+	/**
+	 * Signalled when the caller shall be woken up.
+	 */
+	Cond caller_cond;
+
 	std::exception_ptr postponed_exception;
 
-	HugeArray<uint8_t> allocation;
+	HugeArray<std::byte> allocation;
 
-	CircularBuffer<uint8_t> buffer;
+	CircularBuffer<std::byte> buffer{allocation};
+
+	offset_type seek_offset = UNKNOWN_SIZE;
 
 	/**
 	 * Shall the stream be closed?
@@ -77,6 +81,8 @@ public:
 	void Check() final;
 	bool IsEOF() const noexcept final;
 	bool IsAvailable() const noexcept final;
+	void Seek(std::unique_lock<Mutex> &lock,
+		  offset_type new_offset) final;
 	size_t Read(std::unique_lock<Mutex> &lock,
 		    std::span<std::byte> dest) override final;
 
@@ -117,7 +123,17 @@ protected:
 	 *
 	 * @return 0 on end-of-file
 	 */
-	virtual size_t ThreadRead(void *ptr, size_t size) = 0;
+	virtual std::size_t ThreadRead(std::span<std::byte> dest) = 0;
+
+	/**
+	 * The actual Seek() implementation.  This virtual method will
+	 * be called from within the thread.
+	 *
+	 * The #InputStream is not locked.
+	 *
+	 * Throws on error.
+	 */
+	virtual void ThreadSeek(offset_type new_offset);
 
 	/**
 	 * Optional deinitialization before leaving the thread.
@@ -135,7 +151,9 @@ protected:
 	virtual void Cancel() noexcept {}
 
 private:
+	bool IsSeeking() const noexcept {
+		return seek_offset != UNKNOWN_SIZE;
+	}
+
 	void ThreadFunc() noexcept;
 };
-
-#endif

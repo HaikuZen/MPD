@@ -66,27 +66,26 @@ MultiSocketMonitor::ClearSocketList() noexcept
 #ifndef _WIN32
 
 void
-MultiSocketMonitor::ReplaceSocketList(pollfd *pfds, unsigned n) noexcept
+MultiSocketMonitor::ReplaceSocketList(std::span<pollfd> pfds) noexcept
 {
 #ifdef USE_EPOLL
 	always_ready_fds.clear();
 #endif
 
-	pollfd *const end = pfds + n;
-
-	UpdateSocketList([pfds, end](SocketDescriptor fd) -> unsigned {
-			auto i = std::find_if(pfds, end, [fd](const struct pollfd &pfd){
-					return pfd.fd == fd.Get();
-				});
-			if (i == end)
-				return 0;
-
-			return std::exchange(i->events, 0);
+	UpdateSocketList([pfds](SocketDescriptor fd) -> unsigned {
+		auto i = std::find_if(pfds.begin(), pfds.end(), [fd](const struct pollfd &pfd){
+			return pfd.fd == fd.Get();
 		});
 
-	for (auto i = pfds; i != end; ++i)
-		if (i->events != 0)
-			AddSocket(SocketDescriptor(i->fd), i->events);
+		if (i == pfds.end())
+			return 0;
+
+		return std::exchange(i->events, 0);
+	});
+
+	for (const auto &i : pfds)
+		if (i.events != 0)
+			AddSocket(SocketDescriptor(i.fd), i.events);
 }
 
 #endif
@@ -104,7 +103,7 @@ MultiSocketMonitor::Prepare() noexcept
 		constexpr Event::Duration ready_timeout =
 			std::chrono::milliseconds(1);
 		if (timeout < timeout.zero() || timeout > ready_timeout)
-			timeout = ready_timeout;
+			timeout = always_ready_timeout = ready_timeout;
 	}
 #endif
 
@@ -122,9 +121,10 @@ MultiSocketMonitor::OnIdle() noexcept
 		ready = false;
 		DispatchSockets();
 
-		/* TODO: don't refresh always; require users to call
-		   InvalidateSockets() */
-		refresh = true;
+#ifdef USE_EPOLL
+		if (!refresh && !always_ready_fds.empty())
+			timeout_event.Schedule(always_ready_timeout);
+#endif
 	}
 
 	if (refresh) {

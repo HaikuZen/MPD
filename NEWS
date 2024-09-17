@@ -10,7 +10,7 @@ ver 0.24 (not yet released)
   - show PCRE support in "config" response
   - apply Unicode normalization to case-insensitive filter expressions
   - stickers on playlists and some tag types
-  - new commands "stickernames" and "playlistlength"
+  - new commands "stickernames", "stickertypes", "playlistlength", "searchplaylist"
   - new "search"/"find" filter "added-since"
   - allow range in listplaylist and listplaylistinfo
   - "sticker find" supports sort and window parameter and new sticker compare operators "eq", "lt" and "gt"
@@ -31,6 +31,8 @@ ver 0.24 (not yet released)
 * input
   - alsa: limit ALSA buffer time to 2 seconds
   - alsa: set up a channel map
+  - alsa: support the alsa-lib 1.2.11 API
+  - alsa: add option "close_on_pause"
   - curl: add "connect_timeout" configuration
 * decoder
   - ffmpeg: require FFmpeg 4.0 or later
@@ -41,13 +43,14 @@ ver 0.24 (not yet released)
   - opus: implement bitrate calculation
   - sidplay: require libsidplayfp (drop support for the original sidplay)
   - wavpack: require libwavpack version 5
+  - fix MixRamp bug
 * resampler
   - soxr: require libsoxr 0.1.2 or later
 * player
   - add option "mixramp_analyzer" to scan MixRamp tags on-the-fly
   - "one-shot" consume mode
 * tags
-  - new tags "TitleSort", "Mood"
+  - new tags "TitleSort", "Mood", "ShowMovement"
 * output
   - add option "always_off"
   - alsa: require alsa-lib 1.1 or later

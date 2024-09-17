@@ -139,7 +139,7 @@ static void version()
 		   "\n"
 		   "Decoder plugins:\n");
 
-	decoder_plugins_for_each([](const DecoderPlugin &plugin){
+	for (const DecoderPlugin &plugin : GetAllDecoderPlugins()) {
 		fmt::print(" [{}]", plugin.name);
 
 		const char *const*suffixes = plugin.suffixes;
@@ -156,7 +156,7 @@ static void version()
 				fmt::print(" {}", i);
 
 		fmt::print("\n");
-	});
+	}
 
 	fmt::print("\n"
 		   "Filters:\n"
@@ -173,25 +173,27 @@ static void version()
 #endif
 		   "\n\n"
 		   "Output plugins:\n");
-	audio_output_plugins_for_each(plugin)
-		fmt::print(" {}", plugin->name);
+	for (const auto &plugin : GetAllAudioOutputPlugins()) {
+		fmt::print(" {}", plugin.name);
+	}
 	fmt::print("\n"
 
 #ifdef ENABLE_ENCODER
 		   "\n"
 		   "Encoder plugins:\n");
-	encoder_plugins_for_each(plugin)
-		fmt::print(" {}", plugin->name);
+	for (const auto &plugin : GetAllEncoderPlugins()) {
+		fmt::print(" {}", plugin.name);
+	}
 	fmt::print("\n"
 #endif
 
 #ifdef ENABLE_ARCHIVE
 		   "\n"
 		   "Archive plugins:\n");
-	archive_plugins_for_each(plugin) {
-		fmt::print(" [{}]", plugin->name);
+	for (const auto &plugin : GetAllArchivePlugins()) {
+		fmt::print(" [{}]", plugin.name);
 
-		const char *const*suffixes = plugin->suffixes;
+		const char *const*suffixes = plugin.suffixes;
 		if (suffixes != nullptr)
 			for (; *suffixes != nullptr; ++suffixes)
 				fmt::print(" {}", *suffixes);
@@ -212,13 +214,14 @@ static void version()
 		   " archive"
 #endif
 		);
-	input_plugins_for_each(plugin)
-		fmt::print(" {}", plugin->name);
+	for (const InputPlugin &plugin : GetAllInputPlugins())
+		fmt::print(" {}", plugin.name);
 
 	fmt::print("\n\n"
 		   "Playlist plugins:\n");
-	playlist_plugins_for_each(plugin)
-		fmt::print(" {}", plugin->name);
+	for (const auto &plugin : GetAllPlaylistPlugins()) {
+		fmt::print(" {}", plugin.name);
+	}
 
 	fmt::print("\n\n"
 		   "Protocols:\n");

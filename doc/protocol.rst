@@ -344,6 +344,7 @@ The following tags are supported by :program:`MPD`:
 * **ensemble**: the ensemble performing this song, e.g. "Wiener Philharmoniker".
 * **movement**: name of the movement, e.g. "Andante con moto".
 * **movementnumber**: movement number, e.g. "2" or "II".
+* **showmovement**: If this tag is set to "1" players supporting this tag will display the `work`, `movement`, and `movementnumber`` instead of the track title.
 * **location**: location of the recording, e.g. "Royal Albert Hall".
 * **grouping**: "used if the sound belongs to a larger category of
   sounds/music" (`from the IDv2.4.0 TIT1 description
@@ -993,6 +994,14 @@ remote playlists (absolute URI with a supported scheme).
     plugins are supported. A range may be specified to list
     only a part of the playlist. [#since_0_24]_
 
+.. _command_searchplaylist:
+
+:command:`searchplaylist {NAME} {FILTER} [{START:END}]`
+    Search the playlist for songs matching
+    ``FILTER`` (see :ref:`Filters <filter_syntax>`).  Playlist
+    plugins are supported. A range may be specified to list
+    only a part of the playlist.
+
 .. _command_listplaylists:
 
 :command:`listplaylists`
@@ -1577,6 +1586,9 @@ Examples:
 
 :command:`stickernames`
     Gets a list of uniq sticker names.
+
+:command:`stickertypes`
+    Shows a list of available sticker types.
 
 Connection settings
 ===================

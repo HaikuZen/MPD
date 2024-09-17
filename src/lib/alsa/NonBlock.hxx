@@ -1,22 +1,37 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Copyright The Music Player Daemon Project
 
-#ifndef MPD_ALSA_NON_BLOCK_HXX
-#define MPD_ALSA_NON_BLOCK_HXX
+#pragma once
 
 #include "event/Chrono.hxx"
-#include "util/ReusableArray.hxx"
+#include "util/AllocatedArray.hxx"
 
 #include <alsa/asoundlib.h>
 
+#include <span>
+
 class MultiSocketMonitor;
+
+namespace Alsa {
+
+class NonBlock {
+	AllocatedArray<pollfd> buffer;
+
+public:
+	std::span<pollfd> Allocate(std::size_t n) noexcept {
+		buffer.ResizeDiscard(n);
+		return buffer;
+	}
+
+	std::span<pollfd> CopyReturnedEvents(MultiSocketMonitor &m) noexcept;
+};
 
 /**
  * Helper class for #MultiSocketMonitor's virtual methods which
  * manages the file descriptors for a #snd_pcm_t.
  */
-class AlsaNonBlockPcm {
-	ReusableArray<pollfd> pfd_buffer;
+class NonBlockPcm {
+	NonBlock base;
 
 public:
 	/**
@@ -38,8 +53,8 @@ public:
  * Helper class for #MultiSocketMonitor's virtual methods which
  * manages the file descriptors for a #snd_mixer_t.
  */
-class AlsaNonBlockMixer {
-	ReusableArray<pollfd> pfd_buffer;
+class NonBlockMixer {
+	NonBlock base;
 
 public:
 	Event::Duration PrepareSockets(MultiSocketMonitor &m,
@@ -52,4 +67,4 @@ public:
 	void DispatchSockets(MultiSocketMonitor &m, snd_mixer_t *mixer) noexcept;
 };
 
-#endif
+} // namespace Alsa

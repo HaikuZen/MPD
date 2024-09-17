@@ -37,10 +37,6 @@ public:
 		return fd == other.fd;
 	}
 
-	constexpr bool operator!=(FileDescriptor other) const noexcept {
-		return !(*this == other);
-	}
-
 	constexpr bool IsDefined() const noexcept {
 		return fd >= 0;
 	}
@@ -167,6 +163,15 @@ public:
 	 */
 	void DisableCloseOnExec() const noexcept;
 
+#ifdef __linux__
+	/**
+	 * Set the capacity of the pipe.
+	 *
+	 * This method ignores errors.
+	 */
+	void SetPipeCapacity(unsigned capacity) const noexcept;
+#endif
+
 	/**
 	 * Duplicate this file descriptor.
 	 *
@@ -231,9 +236,8 @@ public:
 
 #ifndef _WIN32
 	[[nodiscard]]
-	ssize_t ReadAt(off_t offset,
-		       void *buffer, std::size_t length) const noexcept {
-		return ::pread(fd, buffer, length, offset);
+	ssize_t ReadAt(off_t offset, std::span<std::byte> dest) const noexcept {
+		return ::pread(fd, dest.data(), dest.size(), offset);
 	}
 #endif
 
@@ -252,6 +256,13 @@ public:
 	 * on error.
 	 */
 	void FullRead(std::span<std::byte> dest) const;
+
+#ifndef _WIN32
+	[[nodiscard]]
+	ssize_t WriteAt(off_t offset, std::span<const std::byte> src) const noexcept {
+		return ::pwrite(fd, src.data(), src.size(), offset);
+	}
+#endif
 
 	[[nodiscard]]
 	ssize_t Write(std::span<const std::byte> src) const noexcept {

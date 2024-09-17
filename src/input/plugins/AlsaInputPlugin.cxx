@@ -27,6 +27,8 @@
 
 #include <alsa/asoundlib.h>
 
+#include <fmt/core.h>
+
 #include <cassert>
 
 #include <string.h>
@@ -62,7 +64,7 @@ class AlsaInputStream final
 	snd_pcm_t *capture_handle;
 	const size_t frame_size;
 
-	AlsaNonBlockPcm non_block;
+	Alsa::NonBlockPcm non_block;
 
 	InjectEvent defer_invalidate_sockets;
 
@@ -182,9 +184,8 @@ AlsaInputStream::AlsaInputStream(EventLoop &_loop,
 {
 	OpenDevice(spec);
 
-	std::string mimestr = "audio/x-mpd-alsa-pcm;format=";
-	mimestr += spec.GetFormatString();
-	SetMimeType(mimestr.c_str());
+	SetMimeType(fmt::format("audio/x-mpd-alsa-pcm;format={}",
+				spec.GetFormatString()));
 
 	InputStream::SetReady();
 
