@@ -7,12 +7,12 @@
 /googletest-*/
 /lame-*/
 /libid3tag-*/
-/libmicrohttpd-*/
+/libmicrohttpd*
 /libmpdclient/
 /libnpupnp-*/
-/openssl-*/
-/opus-*/
-/sqlite-*/
 /libogg-*/
 /libvorbis-*/
 /liburing-*/
+/openssl-*/
+/opus-*/
+/sqlite-*/

@@ -58,7 +58,7 @@ ver 0.24 (not yet released)
   - alsa: require alsa-lib 1.1 or later
   - pipewire: map tags "Date" and "Comment"
 * switch to C++20
-  - GCC 10 or clang 11 (or newer) recommended
+  - GCC 12 or clang 14 (or newer) recommended
 * static partition configuration
 * Windows
   - build with libsamplerate
@@ -69,6 +69,13 @@ ver 0.24 (not yet released)
 * require libfmt 9 or later
 * documentation: switch to sphinx-rtd-theme
 * require Meson 1.0
+
+ver 0.23.17 (not yet released)
+* storage
+  - nfs: require libnfs 4.0 or later
+* database
+  - inotify: trigger update after symlink was created
+* support libfmt 11.1
 
 ver 0.23.16 (2024/12/03)
 * database

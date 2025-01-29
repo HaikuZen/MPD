@@ -266,7 +266,7 @@ MadDecoder::ParseId3(size_t tagsize, Tag *mpd_tag) noexcept
 		id3_data = stream.this_frame;
 		mad_stream_skip(&(stream), tagsize);
 	} else {
-		allocated = std::make_unique<id3_byte_t[]>(tagsize);
+		allocated = std::make_unique_for_overwrite<id3_byte_t[]>(tagsize);
 		memcpy(allocated.get(), stream.this_frame, count);
 		mad_stream_skip(&(stream), count);
 
@@ -661,11 +661,6 @@ inline bool
 MadDecoder::DecodeFirstFrame(Tag *tag) noexcept
 {
 	struct xing xing;
-
-#if GCC_CHECK_VERSION(10,0)
-	/* work around bogus -Wuninitialized in GCC 10 */
-	xing.frames = 0;
-#endif
 
 	while (true) {
 		const auto action = DecodeNextFrame(false, tag);

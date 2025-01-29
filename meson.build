@@ -21,7 +21,9 @@ project(
     'gtest:default_library=static',
     'id3tag:default_library=static',
     'lame:default_library=static',
+    'libmicrohttpd:default_library=static',
     'libmpdclient:default_library=static',
+    'libnpupnp:default_library=static',
     'liburing:default_library=static',
     'ogg:default_library=static',
     'openssl:default_library=static',
@@ -42,6 +44,8 @@ project(
     'id3tag:warning_level=0',
     'lame:werror=false',
     'lame:warning_level=0',
+    'libmicrohttpd:warning_level=0',
+    'libnpupnp:warning_level=0',
     'liburing:warning_level=0',
     'sqlite3:warning_level=0',
     'oggiopus:werror=false',
@@ -98,10 +102,10 @@ version_cxx = vcs_tag(input: 'src/GitVersion.cxx', output: 'GitVersion.cxx')
 compiler = meson.get_compiler('cpp')
 c_compiler = meson.get_compiler('c')
 
-if compiler.get_id() == 'gcc' and compiler.version().version_compare('<10')
-  warning('Your GCC version is too old.  You need at least version 10.')
-elif compiler.get_id() == 'clang' and compiler.version().version_compare('<11')
-  warning('Your clang version is too old.  You need at least version 11.')
+if compiler.get_id() == 'gcc' and compiler.version().version_compare('<12')
+  warning('Your GCC version is too old.  You need at least version 12.')
+elif compiler.get_id() == 'clang' and compiler.version().version_compare('<14')
+  warning('Your clang version is too old.  You need at least version 14.')
 endif
 
 version_conf = configuration_data()
@@ -163,6 +167,7 @@ test_cxxflags = test_common_flags + [
   '-Wmismatched-tags',
   '-Woverloaded-virtual',
   '-Wsign-promo',
+  '-Wsuggest-override',
   '-Wvolatile',
   '-Wvirtual-inheritance',
 
@@ -174,12 +179,6 @@ test_cxxflags = test_common_flags + [
   '-Wheader-hygiene',
   '-Winconsistent-missing-destructor-override',
 ]
-
-if compiler.get_id() != 'gcc' or compiler.version().version_compare('>=9')
-  # The GCC 8 implementation of this flag is buggy: it complains even
-  # if "final" is present, which implies "override".
-  test_cxxflags += '-Wsuggest-override'
-endif
 
 test_cflags = test_common_flags + [
   '-Wmissing-prototypes',
