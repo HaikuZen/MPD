@@ -1,4 +1,43 @@
-ver 0.24 (not yet released)
+ver 0.25 (not yet released)
+* protocol
+  - implement "window" parameter for command "list"
+* output
+  - pipewire: add option "reconnect_stream"
+* switch to C++23
+* require Meson 1.2
+
+ver 0.24.3 (not yet released)
+* decoder
+  - mpg123: fix trailing space in tag values
+* oss
+  - output: fix error "Resource temporarily unavailable"
+
+ver 0.24.2 (2025/03/26)
+* input
+  - io_uring: fix stuck seek after I/O error
+* decoder
+  - flac: enable chained Ogg decoding
+* player
+  - fix stalled playback after queue modification
+  - fix deadlock with "single" mode
+* Linux: fix build failure with ancient kernel headers
+
+ver 0.24.1 (2025/03/21)
+* input
+  - curl: fix malformed "Range" header
+* output
+  - sndio: fix rounding error in volume calculation
+* log: include year in time stamp
+* Linux
+  - add configure-time check for openat2()
+  - fix use-after-free bug on io_uring shutdown
+* macOS
+  - implement standard directories
+  - fix command-line parser errors
+* fix build failure in the "id3tag" Meson subproject
+* doc: use "sphinx_rtd_theme" only if it is installed
+
+ver 0.24 (2025/03/11)
 * protocol
   - new command "searchcount" (case-insensitive "count")
   - "playlistfind"/"playlistsearch" have "sort" and "window" parameters
@@ -64,17 +103,21 @@ ver 0.24 (not yet released)
   - build with libsamplerate
   - remove JACK DLL support
 * remove Haiku support
-* remove macOS support
 * remove Boost dependency
 * require libfmt 9 or later
 * documentation: switch to sphinx-rtd-theme
 * require Meson 1.0
 
-ver 0.23.17 (not yet released)
+ver 0.23.17 (2025/01/29)
+* protocol
+  - "albumart" tries to send larger chunks if available
+  - explicitly disallow "idle" and "noidle" in command lists
 * storage
   - nfs: require libnfs 4.0 or later
 * database
   - inotify: trigger update after symlink was created
+* decoder
+  - ffmpeg: prefer over sndfile and audiofile for its DTS-WAV support
 * support libfmt 11.1
 
 ver 0.23.16 (2024/12/03)
